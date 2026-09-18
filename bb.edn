@@ -40,7 +40,9 @@
                                             :deps/root "spec"}
         io.github.slagyr/isaac-http-test-support {:git/url "https://github.com/slagyr/isaac-http.git"
                                                     :git/sha "11e43014ad5c7b9c8bb693e0eb4f673bbd23991d"
-                                                    :deps/root "spec-support"}}
+                                                    :deps/root "spec-support"}
+        io.github.slagyr/isaac-google {:git/url "https://github.com/slagyr/isaac-google.git"
+                                       :git/sha "a37c199eacbd3ad1e18de424faa53c0dbd285ad2"}}
 
  :tasks
  {config-bypass-lint {:doc "Fail on raw config slurp/read outside isaac.config.* (isaac-foundation-test-support)"

@@ -1,4 +1,3 @@
-@wip
 Feature: Gmail comm
   A Gmail push carries only a history id. Isaac walks history from the
   last id it processed, fetches the new INBOX messages, gates them, and

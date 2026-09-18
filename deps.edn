@@ -5,6 +5,8 @@
                                           :git/sha "ad0a97b7f039814dc92916299baf3c07a5b86f3a"}
         io.github.slagyr/isaac-agent {:git/url "https://github.com/slagyr/isaac-agent.git"
                                           :git/sha "0e804c0a07a2f61262a7946f9f51ddb0e947f11c"}
+        io.github.slagyr/isaac-google {:git/url "https://github.com/slagyr/isaac-google.git"
+                                          :git/sha "a37c199eacbd3ad1e18de424faa53c0dbd285ad2"}
         }
 
  :aliases
@@ -16,7 +18,8 @@
                                io.github.slagyr/isaac-http               {:local/root "../isaac-http"}
                                io.github.slagyr/isaac-http-test-support  {:local/root "../isaac-http/spec-support"}
                                marigold.bridge/marigold.bridge             {:local/root "../isaac-foundation/modules/marigold.bridge"}
-                               marigold.longwave/marigold.longwave         {:local/root "../isaac-foundation/modules/marigold.longwave"}}}
+                               marigold.longwave/marigold.longwave         {:local/root "../isaac-foundation/modules/marigold.longwave"}
+                               io.github.slagyr/isaac-google               {:local/root "../isaac-google"}}}
 
   :spec {:extra-paths ["spec"]
          :extra-deps  {io.github.slagyr/isaac-foundation-test-support {:git/url "https://github.com/slagyr/isaac-foundation.git"
