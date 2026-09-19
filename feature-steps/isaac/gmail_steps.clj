@@ -14,6 +14,8 @@
     [isaac.config.api :as config]
     [isaac.config.loader :as loader]
     [isaac.fs :as fs]
+    [isaac.google.events]
+    [isaac.google.registration :as google-registration]
     [isaac.llm.api.grover :as grover]
     [isaac.llm.auth.store :as auth-store]
     [isaac.module.discovery :as discovery]
@@ -33,7 +35,9 @@
     (g/dissoc! :gmail-gone)
     (g/dissoc! :gmail-comm)
     (g/dissoc! :gmail-access-token)
-    (g/dissoc! :gmail-watch-pushed)))
+    (g/dissoc! :gmail-watch-pushed)
+    (g/dissoc! :gmail-watch-grant)
+    (google-registration/reset-registrations!)))
 
 (defn- kv-cells->map [cells]
   (when (and (seq cells) (even? (count cells)))
@@ -128,6 +132,15 @@
             page  (get (g/get :gmail-history) since)]
         {:status 200 :body (or page {:history [] :historyId since}) :url url :method "GET"
          :headers (:headers req)})
+
+      (str/includes? url "/users/me/watch")
+      (let [grant (or (g/get :gmail-watch-grant) {:status 200 :historyId "1" :expiration "0"})]
+        (if (:error grant)
+          {:status (:status grant) :body {:error {:message (:error grant)}} :url url :method "POST" :headers (:headers req)}
+          {:status 200 :body (select-keys grant [:historyId :expiration]) :url url :method "POST" :headers (:headers req)}))
+
+      (str/includes? url "/users/me/stop")
+      {:status 204 :body nil :url url :method "POST" :headers (:headers req)}
 
       (and (str/includes? url "/messages/send") (= "POST" (str/upper-case (name (:method req "GET")))))
       {:status 200
@@ -266,6 +279,34 @@
             (g/assoc! :gmail-watch-pushed true)
             (session-steps/await-turn!)))))))
 
+(defn gmail-grants-watch [history-id expires-at]
+  (g/assoc! :gmail-watch-grant {:historyId  (str history-id)
+                                :expiration (str (.toEpochMilli (java.time.Instant/parse expires-at)))}))
+
+(defn gmail-refuses-watch [status message]
+  (g/assoc! :gmail-watch-grant {:error message :status (if (string? status) (parse-long status) status)}))
+
+(defn timer-remembers-watch [account expires-at]
+  (with-feature-fs
+    (fn []
+      (google-registration/save-state!
+        (root-dir)
+        (assoc (google-registration/load-state (root-dir)) account {:name account :expires-at expires-at})))))
+
+(defn gmail-watch-timer-ticks []
+  (ensure-gmail-factory!)
+  (inject-gmail-module!)
+  (let [fs*  (feature-fs)
+        root (root-dir)
+        now  (or (g/get :current-time) (java.time.Instant/now))]
+    (nexus/-with-nested-nexus {:fs fs* :root root}
+      (let [cfg (:config (loader/load-config-result {:root root :fs fs*}))]
+        (config/dangerously-install-config! cfg "gmail watch feature")
+        (with-redefs [isaac.google.events/list-subscriptions! (constantly {:subscriptions []})]
+          (with-gmail-stubs
+            (fn []
+              (google-registration/tick! {:now now :root root :door-up? true}))))))))
+
 (defn- header-from-raw [raw name]
   (when (seq raw)
     (let [decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw))
@@ -319,6 +360,19 @@
 
 (defwhen #"Gmail pushes a watch notification with history id \"([^\"]+)\""
   isaac.gmail-steps/push-watch)
+
+(defgiven #"the Gmail API grants a watch with history id \"([^\"]+)\" expiring at \"([^\"]+)\""
+  isaac.gmail-steps/gmail-grants-watch)
+
+(defgiven #"the Gmail API refuses the watch with (\d+) \"([^\"]+)\""
+  isaac.gmail-steps/gmail-refuses-watch)
+
+(defgiven #"the registration timer remembers a watch for \"([^\"]+)\" expiring at \"([^\"]+)\""
+  isaac.gmail-steps/timer-remembers-watch)
+
+(defwhen "the Gmail watch timer ticks"
+  isaac.gmail-steps/gmail-watch-timer-ticks
+  "One reconcile pass of isaac-google's registration timer with the Gmail API stubbed.")
 
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)
