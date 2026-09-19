@@ -224,16 +224,6 @@
         (fn []
           (cursor/save-cursor! root (str id)))))))
 
-(defn google-auth-store-has-access [at rt]
-  (with-feature-fs
-    (fn []
-      (auth-store/save-tokens! (or (root-dir) "target/test-state") "google"
-                               {:access_token  at
-                                :refresh_token rt
-                                :expires_in    3600}
-                               (feature-fs))))
-  (g/assoc! :gmail-access-token at))
-
 (defn- gmail-outbound-comm-registered []
   (ensure-gmail-factory!)
   (inject-gmail-module!)
@@ -309,13 +299,6 @@
           (g/should= v (header-from-raw raw key)))))
     (g/should (seq decoded))))
 
-(defn no-outbound-to [url]
-  (let [reqs (or (g/get :outbound-http-requests) [])]
-    (g/should-not (some #(str/starts-with? (str (:url %)) url) reqs))))
-
-(defgiven "the google auth store has access {at:string} and refresh {rt:string}"
-  isaac.gmail-steps/google-auth-store-has-access)
-
 (defgiven "the gmail history cursor is {id:string}"
   isaac.gmail-steps/cursor-is)
 
@@ -340,5 +323,3 @@
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)
 
-(defthen #"no outbound HTTP request to \"([^\"]+)\" was made"
-  isaac.gmail-steps/no-outbound-to)

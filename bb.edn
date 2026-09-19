@@ -34,15 +34,15 @@
                                            :git/sha "0e804c0a07a2f61262a7946f9f51ddb0e947f11c"
                                            :deps/root "spec"}
         io.github.slagyr/isaac-http {:git/url "https://github.com/slagyr/isaac-http.git"
-                                       :git/sha "11e43014ad5c7b9c8bb693e0eb4f673bbd23991d"}
+                                       :git/sha "ad4ba5d86a104356c5e7de3a0a0360e2528f0db8"}
         io.github.slagyr/isaac-http-spec {:git/url "https://github.com/slagyr/isaac-http.git"
-                                            :git/sha "11e43014ad5c7b9c8bb693e0eb4f673bbd23991d"
+                                            :git/sha "ad4ba5d86a104356c5e7de3a0a0360e2528f0db8"
                                             :deps/root "spec"}
         io.github.slagyr/isaac-http-test-support {:git/url "https://github.com/slagyr/isaac-http.git"
-                                                    :git/sha "11e43014ad5c7b9c8bb693e0eb4f673bbd23991d"
+                                                    :git/sha "ad4ba5d86a104356c5e7de3a0a0360e2528f0db8"
                                                     :deps/root "spec-support"}
         io.github.slagyr/isaac-google {:git/url "https://github.com/slagyr/isaac-google.git"
-                                       :git/sha "a37c199eacbd3ad1e18de424faa53c0dbd285ad2"}}
+                                       :git/sha "3f35d2c08681eda7b5e7216fbf4a685bae96a574"}}
 
  :tasks
  {config-bypass-lint {:doc "Fail on raw config slurp/read outside isaac.config.* (isaac-foundation-test-support)"
