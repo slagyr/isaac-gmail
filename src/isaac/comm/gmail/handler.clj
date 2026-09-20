@@ -100,7 +100,11 @@
   (let [merged (enrich stub)
         reason (gate/drop-reason merged (allow-from cfg))]
     (if reason
-      (log/debug :gmail/message-dropped :reason reason :id (:id merged))
+      ;; :unauthenticated means an allow-from pattern named the sender's domain
+      ;; and Gmail would not vouch for it — the one drop an operator must see.
+      (if (= :unauthenticated reason)
+        (log/warn :gmail/message-dropped :reason reason :id (:id merged) :from (:from merged))
+        (log/debug :gmail/message-dropped :reason reason :id (:id merged)))
       (start-turn! merged cfg))))
 
 (defn- newest-history-id [msgs fallback]
@@ -123,7 +127,9 @@
     (doseq [msg msgs]
       (let [reason (gate/drop-reason msg (allow-from cfg))]
         (if reason
-          (log/debug :gmail/message-dropped :reason reason :id (:id msg))
+          (if (= :unauthenticated reason)
+            (log/warn :gmail/message-dropped :reason reason :id (:id msg) :from (:from msg))
+            (log/debug :gmail/message-dropped :reason reason :id (:id msg)))
           (start-turn! msg cfg))))
     (cursor/save-cursor! root newest)))
 

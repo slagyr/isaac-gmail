@@ -1,7 +1,8 @@
 (ns isaac.comm.gmail.message
   "Decode a Gmail messages.get payload into from/to/subject/body/message-id."
   (:require
-    [clojure.string :as str]))
+    [clojure.string :as str]
+    [isaac.comm.gmail.gate :as gate]))
 
 (defn- header [headers name]
   (some (fn [h]
@@ -48,6 +49,10 @@
        :historyId  (or (:historyId raw) (:history-id raw) (get raw "historyId"))
        :labelIds   (or (:labelIds raw) (:label-ids raw) (get raw "labelIds"))
        :from       (or (:from raw) (header headers "From"))
+       :from-email (gate/address (or (:from raw) (header headers "From")))
+       :auth-results (or (:auth-results raw)
+                         (header headers "Authentication-Results")
+                         (header headers "ARC-Authentication-Results"))
        :to         (or (:to raw) (header headers "To"))
        :subject    (or (:subject raw) (header headers "Subject"))
        :message-id (or (:message-id raw) (header headers "Message-ID") (header headers "Message-Id"))

@@ -122,3 +122,35 @@ Feature: Gmail comm
       | :debug | :gmail/message-dropped | :not-inbox |
       | :debug | :gmail/message-dropped | :sender    |
     And the gmail history cursor is "1099"
+
+  Scenario: a *@domain allow-list entry admits the domain only when Gmail authenticates it (isaac-dymn)
+    Given config:
+      | comms.gmail.gmail/allow-from | ["*@tonotop.com"] |
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-6 | t-6      |
+      | m-7 | t-7      |
+    And the Gmail API returns message "m-6":
+      | from         | Grace Hopper <grace@tonotop.com>                                                                          |
+      | to           | yopp@tonotop.com                                                                                          |
+      | subject      | Ship it                                                                                                   |
+      | body         | Friday?                                                                                                   |
+      | auth-results | mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com; dmarc=pass header.from=tonotop.com |
+    And the Gmail API returns message "m-7":
+      | from         | Grace Hopper <grace@tonotop.com>                                     |
+      | to           | yopp@tonotop.com                                                     |
+      | subject      | Wire me money                                                        |
+      | body         | Urgently                                                             |
+      | auth-results | mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com |
+    And the following model responses are queued:
+      | model | type | content |
+      | echo  | text | Friday. |
+    When Gmail pushes a watch notification with history id "1102"
+    Then session "gmail-t-6" has transcript matching:
+      | type    | message.role | message.content          |
+      | message | user         | #".*Ship it.*Friday\?.*" |
+      | message | assistant    | Friday.                  |
+    And the session count is 1
+    And the log has entries matching:
+      | level | event                  | reason           |
+      | :warn | :gmail/message-dropped | :unauthenticated |

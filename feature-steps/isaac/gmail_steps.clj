@@ -209,6 +209,7 @@
                   :subject    (or (get m "subject") (get m :subject))
                   :message-id (or (get m "message-id") (get m :message-id))
                   :body       (or (get m "body") (get m :body))
+                  :auth-results (or (get m "auth-results") (get m :auth-results))
                   :labelIds   (or (:labelIds existing) ["INBOX"])
                   :threadId   (or (get m "threadId") (get m :threadId) (:threadId existing))
                   :historyId  (or (get m "historyId") (:historyId existing))}]
