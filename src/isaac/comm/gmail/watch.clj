@@ -5,14 +5,20 @@
    topic for up to seven days; it answers with a historyId and an
    expiration and offers no way to list what is watched. So the entry
    brings its own :remote view (the timer's persisted state) and stops
-   through users.stop. Renewal is another users.watch."
+   through users.stop. Renewal is another users.watch.
+
+   A reconcile pass runs once per Google organization with `tenants/*tenant*`
+   bound, so the mailboxes are that organization's comms' and the watch names
+   that organization's topic (isaac-1zkz)."
   (:require
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
+    [isaac.comm.gmail.tenant :as tenant]
     [isaac.config.loader :as loader]
     [isaac.config.root :as root]
     [isaac.fs :as fs]
     [isaac.google.registration :as registration]
+    [isaac.google.tenants :as tenants]
     [isaac.nexus :as nexus])
   (:import
     (java.time Instant)))
@@ -26,26 +32,23 @@
 (defn- runtime-root []
   (or (nexus/get :root) (root/current-root)))
 
-(defn- gmail-slice [cfg]
-  (or (get-in cfg [:comms :gmail])
-      (get-in cfg [:comms "gmail"])
-      {}))
-
 (defn- load-cfg []
   (let [root (runtime-root)
         snap (try (loader/snapshot "gmail watch") (catch Exception _ {}))]
-    (or (when (seq (gmail-slice snap)) snap)
+    (or (when (seq (tenants/comms snap tenant/KIND)) snap)
         (when root
           (:config (loader/load-config-result {:root root :fs (runtime-fs)})))
         snap
         {})))
 
-(defn- account [cfg]
-  (let [slice (gmail-slice cfg)]
-    (or (:gmail/account slice) (:account slice))))
+(defn- accounts
+  "The mailboxes this reconcile pass is watching: the ones belonging to the
+   organization it is acting for."
+  [cfg]
+  (tenant/accounts-for cfg (tenants/resolve-id cfg nil)))
 
 (defn- topic [cfg]
-  (get-in cfg [:google :topic]))
+  (get-in cfg (conj (tenants/config-path cfg (tenants/resolve-id cfg nil)) :topic)))
 
 (defn- auth-headers []
   {"Authorization" (str "Bearer " (gmail-api/access-token))
@@ -57,9 +60,10 @@
    :labelFilterAction "include"})
 
 (defn keys*
-  "One watch per mailbox: the configured account, or nothing."
+  "One watch per mailbox: the configured accounts of this organization's
+   comms, or nothing."
   []
-  (if-let [a (account (load-cfg))] [a] []))
+  (accounts (load-cfg)))
 
 (defn on-watch-response! [root watch]
   (cursor/seed-from-watch! root watch))

@@ -5,11 +5,18 @@
     [isaac.config.loader :as loader]
     [isaac.fs :as fs]
     [isaac.google.registration :as registration]
+    [isaac.google.tenants :as tenants]
     [isaac.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (def cfg {:google {:topic "projects/marigold/topics/isaac"}
           :comms  {:gmail {:gmail/account "yopp@tonotop.com"}}})
+
+(def tenanted
+  {:google {:tonotop {:project "marigold"  :topic "projects/marigold/topics/isaac"}
+            :acme    {:project "acme-prod" :topic "projects/acme-prod/topics/isaac"}}
+   :comms  {:gmail      {:gmail/account "yopp@tonotop.com" :google :tonotop}
+            :gmail-acme {:type :gmail :google :acme :gmail/account "isaac@acme.example"}}})
 
 (describe "gmail watch registration"
 
@@ -25,6 +32,17 @@
 
   (it "keys the entry by the configured mailbox"
     (should= ["yopp@tonotop.com"] (sut/keys*)))
+
+  (it "keys the entry by the mailboxes of the organization this pass acts for"
+    (with-redefs [loader/snapshot (fn [_] tenanted)]
+      (should= ["isaac@acme.example"] (binding [tenants/*tenant* :acme] (sut/keys*)))
+      (should= ["yopp@tonotop.com"] (binding [tenants/*tenant* :tonotop] (sut/keys*)))))
+
+  (it "watches a mailbox against its own organization's topic"
+    (with-redefs [loader/snapshot (fn [_] tenanted)]
+      (binding [tenants/*tenant* :acme]
+        (sut/watch! "isaac@acme.example"))
+      (should= "projects/acme-prod/topics/isaac" (get-in (first @@requests) [:body :topicName]))))
 
   (it "has no key when no gmail account is configured"
     (with-redefs [loader/snapshot (fn [_] {:comms {:gmail {}}})]

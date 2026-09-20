@@ -10,12 +10,14 @@
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.handler :as handler]
+    [isaac.comm.protocol :as comm]
     [isaac.comm.registry :as comm-registry]
     [isaac.config.api :as config]
     [isaac.config.loader :as loader]
     [isaac.fs :as fs]
     [isaac.google.events]
     [isaac.google.registration :as google-registration]
+    [isaac.google.tenants :as tenants]
     [isaac.llm.api.grover :as grover]
     [isaac.llm.auth.store :as auth-store]
     [isaac.module.discovery :as discovery]
@@ -100,12 +102,12 @@
   (when-not (get-method comm-factory/create :gmail)
     (require 'isaac.comm.gmail)))
 
-(defn- load-gmail-cfg []
+(defn- load-comm-cfg [comm-name]
   (let [fs*  (feature-fs)
         root (root-dir)
         cfg  (:config (loader/load-config-result {:root root :fs fs*}))]
-    (or (get-in cfg [:comms :gmail])
-        (get-in cfg [:comms "gmail"])
+    (or (get-in cfg [:comms (keyword comm-name)])
+        (get-in cfg [:comms (name comm-name)])
         {})))
 
 (defn- record-http! [req]
@@ -238,24 +240,64 @@
         (fn []
           (cursor/save-cursor! root (str id)))))))
 
-(defn- gmail-outbound-comm-registered []
+(defn gmail-comm-registered
+  "Register one configured Gmail comm by name as the comm under test."
+  [comm-name]
   (ensure-gmail-factory!)
   (inject-gmail-module!)
   (ensure-session-store!)
   (let [fs*  (feature-fs)
         root (root-dir)
-        comm (gmail/make {:name :gmail :root root})
+        comm (gmail/make {:name (keyword comm-name) :root root})
         cfg  (nexus/-with-nested-nexus {:fs fs* :root root}
-               (load-gmail-cfg))]
+               (load-comm-cfg comm-name))]
     (reset! (.-cfg comm) cfg)
-    (comm-registry/register-instance! "gmail" comm)
+    (comm-registry/register-instance! (name comm-name) comm)
     (g/assoc! :gmail-comm comm)))
 
+(defn- gmail-outbound-comm-registered []
+  (gmail-comm-registered "gmail"))
+
+(defn google-auth-store-for-organization
+  "Seed one organization's tokens in the auth store."
+  [organization at rt]
+  (auth-store/save-tokens! (root-dir)
+                           (tenants/auth-provider (keyword organization))
+                           {:access_token at :refresh_token rt :expires_in 3600}
+                           (feature-fs)))
+
+(defn- stored-access-token
+  "The access token one organization has in the auth store, or the token every
+   gmail scenario that never signed in has been using."
+  [id]
+  (or (some-> (auth-store/load-tokens (or (root-dir) "target/test-state")
+                                      (tenants/auth-provider (or id tenants/DEFAULT))
+                                      (feature-fs))
+              (#(or (:access %) (:access_token %))))
+      (g/get :gmail-access-token)
+      "at-1"))
+
 (defn- with-gmail-stubs [f]
-  (let [token (or (g/get :gmail-access-token) "at-1")]
-    (with-redefs [gmail-api/-http!       stub-http!
-                  gmail-api/access-token (constantly token)]
-      (f))))
+  (with-redefs [gmail-api/-http!       stub-http!
+                gmail-api/access-token #(stored-access-token tenants/*tenant*)]
+    (f)))
+
+(defn- record-from-table
+  "A | path | value | table as a send record."
+  [{:keys [rows]}]
+  (into {} (map (fn [[path value]] [(keyword path) value])) rows))
+
+(defn gmail-comm-send!
+  "Invoke send! on the comm under test with the record the table describes."
+  [table]
+  (let [record (record-from-table table)
+        comm   (g/get :gmail-comm)
+        fs*    (feature-fs)
+        root   (root-dir)]
+    (nexus/-with-nested-nexus {:fs fs* :root root}
+      (with-gmail-stubs
+        (fn []
+          (comm/send! comm record))))))
 
 (defn push-watch [history-id]
   (ensure-gmail-factory!)
@@ -370,6 +412,15 @@
 
 (defgiven #"the registration timer remembers a watch for \"([^\"]+)\" expiring at \"([^\"]+)\""
   isaac.gmail-steps/timer-remembers-watch)
+
+(defgiven #"gmail comm \"([^\"]+)\" is registered"
+  isaac.gmail-steps/gmail-comm-registered)
+
+(defgiven #"the google auth store for organization \"([^\"]+)\" has access \"([^\"]+)\" and refresh \"([^\"]+)\""
+  isaac.gmail-steps/google-auth-store-for-organization)
+
+(defwhen "gmail comm send! is invoked with:"
+  isaac.gmail-steps/gmail-comm-send!)
 
 (defwhen "the Gmail watch timer ticks"
   isaac.gmail-steps/gmail-watch-timer-ticks

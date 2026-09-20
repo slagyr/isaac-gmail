@@ -1,13 +1,18 @@
 (ns isaac.comm.gmail
   "Gmail comm factory. Inbound lives on the google handler; on-reply
-   posts a reply on the originating thread."
+   posts a reply on the originating thread.
+
+   A comm speaks for one Google organization, so every send runs as that
+   organization and uses its token (isaac-1zkz)."
   (:require
     [clojure.string :as str]
     [isaac.comm.factory :as factory]
     [isaac.comm.gmail.api :as api]
     [isaac.comm.gmail.rfc2822 :as rfc2822]
+    [isaac.comm.gmail.tenant :as tenant]
     [isaac.comm.protocol :as comm]
     [isaac.config.root :as root]
+    [isaac.google.tenants :as tenants]
     [isaac.logger :as log]
     [isaac.nexus :as nexus]))
 
@@ -17,6 +22,16 @@
   (when (and session-key (= :gmail (:kind origin)))
     (swap! origin-by-session assoc session-key origin)))
 
+(defn- slice [comm]
+  (or @(.-cfg comm) {}))
+
+(defn- as-comm-organization
+  "Run `f` as the organization this comm speaks for, so the token, and
+   anything else that asks which organization this is, answer for it."
+  [comm f]
+  (binding [tenants/*tenant* (tenant/of-comm (slice comm))]
+    (f)))
+
 (defn- send-reply! [origin text]
   (let [raw (api/encode-raw (rfc2822/reply-raw {:from       (:from origin)
                                                 :subject    (:subject origin)
@@ -24,7 +39,7 @@
                                                 :body       text}))]
     (api/messages-send! {:raw raw :thread-id (or (:thread-id origin) (:threadId origin))})))
 
-(defn- send!* [_comm record]
+(defn- send!* [comm record]
   (try
     (let [text   (str/trim (str (:content record)))
           origin (or (get @origin-by-session (:session-key record))
@@ -34,7 +49,7 @@
         {:ok false :transient? false}
 
         :else
-        (do (send-reply! origin text)
+        (do (as-comm-organization comm #(send-reply! origin text))
             {:ok true})))
     (catch Exception e
       (log/error :gmail.send/failed :error (.getMessage e))
@@ -44,11 +59,11 @@
   (when-let [origin (:origin cycle)]
     (remember-origin! session-key origin)))
 
-(defn- on-reply* [_comm session-key text]
+(defn- on-reply* [comm session-key text]
   (when-let [origin (get @origin-by-session session-key)]
     (when (seq (str/trim (str text)))
       (try
-        (send-reply! origin text)
+        (as-comm-organization comm #(send-reply! origin text))
         (catch Exception e
           (log/error :gmail.reply/failed :error (.getMessage e)))))))
 
