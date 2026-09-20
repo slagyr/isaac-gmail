@@ -1,5 +1,5 @@
 (ns isaac.comm.gmail.rfc2822
-  "Build RFC 2822 reply messages for Gmail messages.send.")
+  "Build RFC 2822 messages for Gmail messages.send.")
 
 (defn- re-subject [subject]
   (let [s (or subject "")]
@@ -14,5 +14,14 @@
        (when (seq message-id)
          (str "In-Reply-To: " message-id "\r\n"
               "References: " message-id "\r\n"))
+       "\r\n"
+       (or body "")))
+
+(defn message-raw
+  "Plain-text RFC 2822 message that is not a reply: the subject is taken as
+   written and no threading headers are added (isaac-jqk2)."
+  [{:keys [to subject body]}]
+  (str "To: " to "\r\n"
+       "Subject: " (or subject "") "\r\n"
        "\r\n"
        (or body "")))

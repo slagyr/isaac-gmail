@@ -10,6 +10,7 @@
 (def HISTORY-URL "https://gmail.googleapis.com/gmail/v1/users/me/history")
 (def MESSAGES-URL "https://gmail.googleapis.com/gmail/v1/users/me/messages")
 (def SEND-URL "https://gmail.googleapis.com/gmail/v1/users/me/messages/send")
+(def LABELS-URL "https://gmail.googleapis.com/gmail/v1/users/me/labels")
 
 (defn- parse-body [body]
   (try
@@ -113,4 +114,27 @@
     (if (<= 200 (:status resp) 299)
       (:body resp)
       (throw (ex-info (str "Gmail messages.send failed: " (:status resp))
+                      {:status (:status resp) :body (:body resp)})))))
+
+(defn messages-search!
+  "GET users.messages.list with Gmail's own query syntax (isaac-jqk2)."
+  [{:keys [q limit page-token]}]
+  (let [resp (-http! {:method  "GET"
+                      :url     MESSAGES-URL
+                      :headers (auth-headers)
+                      :query   (cond-> {:maxResults (or limit 25)}
+                                 (seq q)          (assoc :q q)
+                                 (seq page-token) (assoc :pageToken page-token))})]
+    (if (<= 200 (:status resp) 299)
+      (:body resp)
+      (throw (ex-info (str "Gmail messages.list failed: " (:status resp))
+                      {:status (:status resp) :body (:body resp) :q q})))))
+
+(defn labels-list!
+  "GET users.labels.list."
+  []
+  (let [resp (-http! {:method "GET" :url LABELS-URL :headers (auth-headers)})]
+    (if (<= 200 (:status resp) 299)
+      (:body resp)
+      (throw (ex-info (str "Gmail labels.list failed: " (:status resp))
                       {:status (:status resp) :body (:body resp)})))))
