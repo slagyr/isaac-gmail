@@ -10,6 +10,7 @@ Feature: Gmail comm
     Given default Grover setup in "/test/gmail"
     And config:
       | log.output                   | memory              |
+      | google.tonotop.project       | marigold            |
       | comms.gmail.gmail/account    | yopp@tonotop.com    |
       | comms.gmail.gmail/allow-from | ["ada@tonotop.com"] |
       | comms.gmail.gmail/crew       | main                |

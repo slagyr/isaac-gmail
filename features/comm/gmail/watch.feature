@@ -9,10 +9,10 @@ Feature: Gmail INBOX watch
   Background:
     Given default Grover setup in "/test/gmail-watch"
     And config:
-      | log.output                | memory                         |
-      | google.topic              | projects/marigold/topics/isaac |
-      | google.renew-within-hours | 24                             |
-      | comms.gmail.gmail/account | yopp@tonotop.com               |
+      | log.output                        | memory                         |
+      | google.tonotop.topic              | projects/marigold/topics/isaac |
+      | google.tonotop.renew-within-hours | 24                             |
+      | comms.gmail.gmail/account         | yopp@tonotop.com               |
     And the google auth store has access "at-1" and refresh "rt-1"
     And the clock is fixed at "2026-09-18T12:00:00Z"
 

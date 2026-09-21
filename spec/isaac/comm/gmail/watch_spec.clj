@@ -9,7 +9,9 @@
     [isaac.nexus :as nexus]
     [speclj.core :refer :all]))
 
-(def cfg {:google {:topic "projects/marigold/topics/isaac"}
+;; One organization is written the same way as several — google.<id>.* — and a
+;; comm on a one-organization host names none (isaac-okfj).
+(def cfg {:google {:tonotop {:topic "projects/marigold/topics/isaac"}}
           :comms  {:gmail {:gmail/account "yopp@tonotop.com"}}})
 
 (def tenanted

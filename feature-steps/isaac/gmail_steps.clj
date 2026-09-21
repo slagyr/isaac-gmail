@@ -268,11 +268,13 @@
 
 (defn- stored-access-token
   "The access token one organization has in the auth store, or the token every
-   gmail scenario that never signed in has been using."
+   gmail scenario that never signed in has been using. Every login belongs to
+   an organization, so without one there is no store to read (isaac-okfj)."
   [id]
-  (or (some-> (auth-store/load-tokens (or (root-dir) "target/test-state")
-                                      (tenants/auth-provider (or id tenants/DEFAULT))
-                                      (feature-fs))
+  (or (some-> (when id
+                (auth-store/load-tokens (or (root-dir) "target/test-state")
+                                        (tenants/auth-provider id)
+                                        (feature-fs)))
               (#(or (:access %) (:access_token %))))
       (g/get :gmail-access-token)
       "at-1"))
