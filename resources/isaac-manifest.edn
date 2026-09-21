@@ -6,7 +6,7 @@
 
  :isaac.http/comm
  {:gmail {:namespace    isaac.comm.gmail
-          :extra-schema {:google           {:type        :keyword
+          :extra-schema {:gmail/google     {:type        :keyword
                                             :description "Google organization (tenant) this comm speaks for: it sends with that organization's token and its mailbox is watched against that organization's topic. Omit on a host with one organization."}
                          :gmail/account    {:type        :string
                                             :description "Google account email of the Isaac user."}

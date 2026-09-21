@@ -1,6 +1,6 @@
 Feature: Gmail across several Google organizations
   One Isaac can carry several Google organizations (isaac-1zkz). A Gmail comm
-  names the one it speaks for with `google`: it sends as that organization's
+  names the one it speaks for with `gmail/google`: it sends as that organization's
   Google user, with that organization's token, and its mailbox is watched
   against that organization's own topic. A host with one organization names
   none and nothing about it changes. Bean: isaac-1zkz.
@@ -13,10 +13,10 @@ Feature: Gmail across several Google organizations
       | google.tonotop.topic           | projects/marigold/topics/isaac  |
       | google.acme.project            | acme-prod                       |
       | google.acme.topic              | projects/acme-prod/topics/isaac |
-      | comms.gmail.google             | tonotop                         |
+      | comms.gmail.gmail/google             | tonotop                         |
       | comms.gmail.gmail/account      | yopp@tonotop.com                |
       | comms.gmail-acme.type          | gmail                           |
-      | comms.gmail-acme.google        | acme                            |
+      | comms.gmail-acme.gmail/google        | acme                            |
       | comms.gmail-acme.gmail/account | isaac@acme.example              |
     And the google auth store for organization "tonotop" has access "at-tonotop" and refresh "rt-tonotop"
     And the google auth store for organization "acme" has access "at-acme" and refresh "rt-acme"
