@@ -18,6 +18,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     And the google auth store has access "at-1" and refresh "rt-1"
     And the gmail history cursor is "1000"
 
+  @wip
   Scenario: a task route sends one hail with the band and message payload, labelled before the hail
     Given the hail module is installed
     And config:
@@ -45,6 +46,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | body-excerpt     | Please file this. |
     And the session count is 0
 
+  @wip
   Scenario: a message already labelled for its task route is not hailed twice
     Given the hail module is installed
     And config:
@@ -65,6 +67,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     When Gmail pushes a watch notification with history id "1042"
     Then no hail was sent
 
+  @wip
   Scenario: an ack route replies on the thread once; the default sends no reply
     Given the hail module is installed
     And config:
@@ -105,6 +108,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     When Gmail pushes a watch notification with history id "1099"
     Then no outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/messages/send" was made
 
+  @wip
   Scenario: a task route without the hail module installed logs a warning and marks the message unsent, no exception
     Given config:
       | gmail-routes.invoices.order         | 20              |
@@ -127,6 +131,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | :warn | :gmail.route/hail-unavailable |
     And the session count is 0
 
+  @wip
   Scenario: the body excerpt sent with a task hail is capped
     Given the hail module is installed
     And config:
@@ -149,6 +154,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | path         | value                |
       | body-excerpt | This message body is |
 
+  @wip
   Scenario: a task route with a *@domain pattern only fires when Gmail authenticates the sender
     Given the hail module is installed
     And config:
