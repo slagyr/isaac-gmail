@@ -1,5 +1,5 @@
 {:id          :isaac.comm.gmail
- :version     "0.1.5"
+ :version     "0.1.6"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
