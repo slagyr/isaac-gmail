@@ -51,14 +51,14 @@
         (and (string? c) (seq c)) c))
 
 (defn- crew
-  "The comm's own crew, else the operator's defaults.crew, else main - a
-   mailbox with no crew of its own runs as the host's default (isaac-rfmh)."
+  "The comm's own crew, else the operator's defaults.crew, else nil - the
+   drive resolves nil to defaults.crew itself and there is no crew named main
+   (isaac-rfmh, isaac-zule)."
   [cfg]
   (let [slice (gmail-slice cfg)]
     (or (:gmail/crew slice)
         (:crew slice)
-        (crew-name (get-in cfg [:defaults :crew]))
-        "main")))
+        (crew-name (get-in cfg [:defaults :crew])))))
 
 (defn- session-key [thread-id]
   (str "gmail-" thread-id))

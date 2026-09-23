@@ -12,5 +12,5 @@
     (should= "yopp" (#'sut/crew {:comms {:gmail {}} :defaults {:crew :yopp}}))
     (should= "yopp" (#'sut/crew {:comms {:gmail {}} :defaults {:crew "yopp"}})))
 
-  (it "is main only when nothing names a crew"
-    (should= "main" (#'sut/crew {}))))
+  (it "is nil when nothing names a crew - never a crew called main (isaac-zule)"
+    (should-be-nil (#'sut/crew {}))))
