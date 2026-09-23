@@ -44,10 +44,20 @@
         (:allow-from slice)
         [])))
 
-(defn- crew [cfg]
+(defn- crew-name
+  "A crew id as the string the drive wants; nil when nothing was configured."
+  [c]
+  (cond (keyword? c) (name c)
+        (and (string? c) (seq c)) c))
+
+(defn- crew
+  "The comm's own crew, else the operator's defaults.crew, else main - a
+   mailbox with no crew of its own runs as the host's default (isaac-rfmh)."
+  [cfg]
   (let [slice (gmail-slice cfg)]
     (or (:gmail/crew slice)
         (:crew slice)
+        (crew-name (get-in cfg [:defaults :crew]))
         "main")))
 
 (defn- session-key [thread-id]
