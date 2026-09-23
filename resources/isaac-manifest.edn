@@ -1,5 +1,5 @@
 {:id          :isaac.comm.gmail
- :version     "0.2.1"
+ :version     "0.2.2"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
@@ -22,7 +22,12 @@
                          :gmail/ignore-marks-read  {:type        :boolean
                                                      :description "Remove Gmail's UNREAD label from a message an :ignore route (or the gate) drops. Default true."}
                          :gmail/task-body-cap      {:type        :int
-                                                     :description "Character cap on a :task route's body-excerpt param. Default 4000. The full message stays readable through the gmail__read tool by id (isaac-3427)."}}}}
+                                                     :description "Character cap on a :task route's body-excerpt param. Default 4000. The full message stays readable through the gmail__read tool by id (isaac-3427)."}
+                         :gmail/mode               {:type        :keyword
+                                                     :validations [[:one-of :push :pull]]
+                                                     :description "How this comm learns about new INBOX mail: :push (default) registers a Pub/Sub watch; :pull schedules an interval task that walks history from the stored cursor instead — no watch, no topic, no door (isaac-u80t)."}
+                         :gmail/pull-interval-ms   {:type        :long
+                                                     :description "How often the :gmail/pull scheduler task walks history in gmail/mode :pull. Default 60000 (isaac-u80t)."}}}}
 
  ;; Mailbox tools on Isaac's own token and the crew's allow-list (isaac-jqk2).
  :isaac.agent/tools

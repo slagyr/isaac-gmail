@@ -41,11 +41,20 @@
         snap
         {})))
 
+(defn- pull-mode?
+  "A comm slice in gmail/mode :pull has no watch: its history is walked by
+   a scheduler tick instead (isaac-u80t)."
+  [slice]
+  (= :pull (keyword (or (:gmail/mode slice) :push))))
+
 (defn- accounts
   "The mailboxes this reconcile pass is watching: the ones belonging to the
-   organization it is acting for."
+   organization it is acting for, minus any comm in gmail/mode :pull."
   [cfg]
-  (tenant/accounts-for cfg (tenants/resolve-id cfg nil)))
+  (vec (keep (fn [[_ slice]]
+               (when-not (pull-mode? slice)
+                 (or (:gmail/account slice) (:account slice))))
+             (tenants/comms-for cfg tenant/KIND (tenants/resolve-id cfg nil)))))
 
 (defn- topic [cfg]
   (get-in cfg (conj (tenants/config-path cfg (tenants/resolve-id cfg nil)) :topic)))

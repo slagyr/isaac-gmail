@@ -148,7 +148,11 @@
     :else
     (dispatch-decision! cfg merged (routes/decide cfg merged))))
 
-(defn- process-message! [stub cfg]
+(defn process-message!
+  "Gate, route, label, and (when the route converses) start a turn for one
+   history-walk message stub. Public: isaac.comm.gmail.pull reuses this so a
+   pull tick's pipeline is identical to a push's (isaac-u80t)."
+  [stub cfg]
   (handle-enriched! (enrich stub) cfg))
 
 (defn- newest-history-id [msgs fallback]
@@ -158,7 +162,11 @@
 (defn- history-num [id]
   (or (try (parse-long (str id)) (catch Exception _ nil)) id))
 
-(defn- resync! [root cursor history-id cfg]
+(defn resync!
+  "Full resync from messages.list when the cursor is gone. Public:
+   isaac.comm.gmail.pull calls this for the same reason process-message! is
+   public (isaac-u80t)."
+  [root cursor history-id cfg]
   (let [listed (gmail-api/messages-list! {})
         msgs   (mapv (fn [m]
                        (message/from-api

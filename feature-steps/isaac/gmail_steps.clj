@@ -12,6 +12,7 @@
     [isaac.comm.gmail.gate :as gate]
     [isaac.comm.gmail.handler :as handler]
     [isaac.comm.gmail.labels :as gmail-labels]
+    [isaac.comm.gmail.pull :as gmail-pull]
     [isaac.comm.protocol :as comm]
     [isaac.comm.registry :as comm-registry]
     [isaac.config.api :as config]
@@ -24,17 +25,28 @@
     [isaac.llm.auth.store :as auth-store]
     [isaac.module.discovery :as discovery]
     [isaac.nexus :as nexus]
+    [isaac.scheduler.runtime :as scheduler]
     [isaac.session.session-steps :as session-steps]
     [isaac.session.store.memory :as memory-store]
-    [isaac.session.store.spi :as session-store]))
+    [isaac.session.store.spi :as session-store]
+    [isaac.step-tables :as match]))
 
 (helper! isaac.gmail-steps)
+
+(defonce ^:private live-scheduler* (atom nil))
+
+(defn- shutdown-gmail-scheduler! []
+  (when-let [s @live-scheduler*]
+    (scheduler/shutdown! s)
+    (reset! live-scheduler* nil))
+  (nexus/deregister! [:scheduler]))
 
 (g/after-scenario
   (fn []
     (alter-var-root #'discovery/*foundation-index-override* (constantly nil))
     (gmail-labels/reset-cache!)
     (g/dissoc! :gmail-history)
+    (g/dissoc! :gmail-history-fail)
     (g/dissoc! :gmail-messages)
     (g/dissoc! :gmail-inbox)
     (g/dissoc! :gmail-gone)
@@ -48,7 +60,8 @@
     ;; enough to make requiring-resolve fail again for the next scenario
     ;; (isaac-3427).
     (when (find-ns 'isaac.hail.queue) (remove-ns 'isaac.hail.queue))
-    (google-registration/reset-registrations!)))
+    (google-registration/reset-registrations!)
+    (shutdown-gmail-scheduler!)))
 
 (defn- kv-cells->map [cells]
   (when (and (seq cells) (even? (count cells)))
@@ -130,6 +143,10 @@
     (g/assoc! :outbound-http-request recorded)
     recorded))
 
+(defn- history-since [req url]
+  (str (or (get-in req [:query :startHistoryId])
+          (second (re-find #"startHistoryId=([^&]+)" url)))))
+
 (defn- stub-http! [req]
   (record-http! req)
   (let [url (str (:url req))]
@@ -137,9 +154,13 @@
       (and (g/get :gmail-gone) (str/includes? url "/history"))
       {:status 404 :body {} :url url :method "GET" :headers (:headers req)}
 
+      (and (str/includes? url "/history")
+           (contains? (g/get :gmail-history-fail) (history-since req url)))
+      {:status 500 :body {:error {:message "Internal error"}} :url url :method "GET"
+       :headers (:headers req)}
+
       (str/includes? url "/history")
-      (let [since (str (or (get-in req [:query :startHistoryId])
-                           (second (re-find #"startHistoryId=([^&]+)" url))))
+      (let [since (history-since req url)
             page  (get (g/get :gmail-history) since)]
         {:status 200 :body (or page {:history [] :historyId since}) :url url :method "GET"
          :headers (:headers req)})
@@ -207,11 +228,24 @@
                  (merge {:id id :threadId (get row "threadId") :labelIds (parse-labels (get row "labelIds"))}
                         existing)))))
 
+(defn- next-history-id
+  "Gmail's real history.list response carries a top-level :historyId ahead of
+   `since` — the mailbox's current state, independent of what the caller
+   asked about. Push scenarios never read it (the pushed notification
+   supplies the next cursor directly); pull scenarios do
+   (isaac.comm.gmail.history/walk-page's :cursor), so a stub batch advances
+   history by a fixed, suite-wide amount rather than echoing `since` back."
+  [since]
+  (if-let [n (try (parse-long (str since)) (catch Exception _ nil))]
+    (str (+ n 42))
+    (str since)))
+
 (defn history-adds-messages [since table]
   (let [rows (table-rows table)
-        page {:historyId (str since)
+        page {:historyId (next-history-id since)
               :history   (mapv row->history-record rows)}]
     (doseq [row rows] (remember-thread! row))
+    (g/update! :gmail-history-fail (fnil disj #{}) (str since))
     (g/update! :gmail-history (fnil assoc {}) (str since) page)))
 
 (defn history-contains [since table]
@@ -220,6 +254,9 @@
 (defn history-gone [since]
   (g/assoc! :gmail-gone true)
   (g/update! :gmail-history (fnil assoc {}) (str since) {:status 404 :error :not-found}))
+
+(defn history-fails-with-500 [since]
+  (g/update! :gmail-history-fail (fnil conj #{}) (str since)))
 
 (defn- synthesized-auth-results
   "Test messages don't carry a real Authentication-Results header. Routes
@@ -403,6 +440,59 @@
             (g/assoc! :gmail-watch-pushed true)
             (session-steps/await-turn!)))))))
 
+(defn gmail-pull-timer-ticks []
+  (ensure-gmail-factory!)
+  (inject-gmail-module!)
+  (ensure-session-store!)
+  (let [fs*  (feature-fs)
+        root (root-dir)]
+    (nexus/-with-nested-nexus {:fs fs* :root root}
+      (let [cfg (:config (loader/load-config-result {:root root :fs fs*}))]
+        (config/dangerously-install-config! cfg "gmail pull feature")
+        (grover/clear-provider-requests!)
+        (with-gmail-stubs
+          (fn []
+            (gmail-pull/tick!)
+            (g/assoc! :gmail-watch-pushed true)
+            (session-steps/await-turn!)))))))
+
+(defn- ensure-gmail-scheduler! []
+  (or @live-scheduler*
+      (let [s (scheduler/create {})]
+        (reset! live-scheduler* s)
+        (nexus/register! [:scheduler] s)
+        s)))
+
+(defn- boot-gmail-schedule!
+  "Loads live config and runs isaac.comm.gmail.pull/start! against a
+   scheduler installed in nexus for this scenario — the feature-level
+   equivalent of a real module boot registering :gmail/pull (isaac-u80t).
+   Neither `the Google runtime component is started` (isaac-google's own
+   step; door-only, read-only here) nor the generic `config:` step reload
+   config or run module lifecycle, so this is what actually exercises it."
+  []
+  (ensure-gmail-factory!)
+  (inject-gmail-module!)
+  (let [fs*   (feature-fs)
+        root  (root-dir)
+        sched (ensure-gmail-scheduler!)]
+    (nexus/-with-nested-nexus {:fs fs* :root root}
+      (let [cfg (:config (loader/load-config-result {:root root :fs fs*}))]
+        (config/dangerously-install-config! cfg "gmail pull-schedule feature")
+        (gmail-pull/start! cfg)))
+    sched))
+
+(defn gmail-scheduled-tasks-include [table]
+  (let [sched  (boot-gmail-schedule!)
+        tasks  (mapv (fn [t] {:id (:id t) :interval-ms (get-in t [:trigger :ms])})
+                     (scheduler/list-tasks sched))
+        result (match/match-entries table tasks)]
+    (g/should= [] (:failures result))))
+
+(defn gmail-scheduled-tasks-are-empty []
+  (let [sched (boot-gmail-schedule!)]
+    (g/should= [] (scheduler/list-tasks sched))))
+
 (defn gmail-grants-watch [history-id expires-at]
   (g/assoc! :gmail-watch-grant {:historyId  (str history-id)
                                 :expiration (str (.toEpochMilli (java.time.Instant/parse expires-at)))}))
@@ -516,6 +606,9 @@
 (defgiven #"the Gmail API history since \"([^\"]+)\" is gone"
   isaac.gmail-steps/history-gone)
 
+(defgiven #"the Gmail API history since \"([^\"]+)\" fails with 500"
+  isaac.gmail-steps/history-fails-with-500)
+
 (defgiven #"the Gmail API returns message \"([^\"]+)\":"
   isaac.gmail-steps/returns-message)
 
@@ -546,6 +639,19 @@
 (defwhen "the Gmail watch timer ticks"
   isaac.gmail-steps/gmail-watch-timer-ticks
   "One reconcile pass of isaac-google's registration timer with the Gmail API stubbed.")
+
+(defwhen "the Gmail pull timer ticks"
+  isaac.gmail-steps/gmail-pull-timer-ticks
+  "One isaac.comm.gmail.pull/tick! with the Gmail API stubbed — the pull-mode
+   counterpart of 'the Gmail watch timer ticks'.")
+
+(defthen "the gmail scheduled tasks include:"
+  isaac.gmail-steps/gmail-scheduled-tasks-include
+  "Boots isaac.comm.gmail.pull/start! against live config and a scenario
+   scheduler, then matches its :id/:interval-ms against the table.")
+
+(defthen "the gmail scheduled tasks are empty"
+  isaac.gmail-steps/gmail-scheduled-tasks-are-empty)
 
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)

@@ -21,9 +21,3 @@
    host is running."
   [slice]
   (tenants/of-comm (live-config) slice))
-
-(defn accounts-for
-  "The mailboxes of one organization's Gmail comms."
-  [config id]
-  (vec (keep (fn [[_ slice]] (or (:gmail/account slice) (:account slice)))
-             (tenants/comms-for config KIND id))))

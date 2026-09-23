@@ -20,7 +20,6 @@ Feature: Gmail pull mode
       | gmail-routes.team.action     | converse      |
     And the google auth store has access "at-1" and refresh "rt-1"
 
-  @wip
   Scenario: pull mode schedules an interval task instead of registering a watch at boot
     Given config:
       | comms.gmail.gmail/mode             | pull  |
@@ -31,7 +30,6 @@ Feature: Gmail pull mode
       | id          | interval-ms |
       | :gmail/pull | 60000       |
 
-  @wip
   Scenario: a pull tick with two new INBOX messages gates and routes them like a push
     Given the gmail history cursor is "1000"
     And config:
@@ -66,7 +64,6 @@ Feature: Gmail pull mode
       | message | assistant    | Yes.                |
     And the gmail history cursor is "1042"
 
-  @wip
   Scenario: a pull tick that gets a server error from history.list retries on the next tick
     Given the gmail history cursor is "1000"
     And config:
@@ -95,7 +92,6 @@ Feature: Gmail pull mode
       | message | user         | #".*Retry works.*" |
       | message | assistant    | Got it.             |
 
-  @wip
   Scenario: a first pull tick with no stored cursor seeds it from the newest history id without processing anything
     Given config:
       | comms.gmail.gmail/mode | pull |
@@ -106,7 +102,6 @@ Feature: Gmail pull mode
     Then the gmail history cursor is "3000"
     And the session count is 0
 
-  @wip
   Scenario: push mode (the default) schedules no pull task
     When the Google runtime component is started
     Then the gmail scheduled tasks are empty
