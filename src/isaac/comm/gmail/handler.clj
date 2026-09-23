@@ -19,6 +19,7 @@
     [isaac.comm.gmail.labels :as labels]
     [isaac.comm.gmail.message :as message]
     [isaac.comm.gmail.routes :as routes]
+    [isaac.comm.gmail.tasks :as tasks]
     [isaac.comm.registry :as comm-registry]
     [isaac.config.defaults :as defaults]
     [isaac.config.loader :as loader]
@@ -122,6 +123,7 @@
   (label-message! cfg merged decision)
   (case (:action decision)
     :converse (start-turn! merged cfg (or (:crew decision) (default-crew cfg)))
+    :task     (tasks/dispatch! (tenant-of cfg) (gmail-slice cfg) merged decision)
     :unrouted (if (seq (:blocked decision))
                (log/warn :gmail/message-dropped :reason :unauthenticated :id (:id merged) :from (:from merged))
                (log/info :gmail/unrouted :from (:from merged) :subject (:subject merged)))

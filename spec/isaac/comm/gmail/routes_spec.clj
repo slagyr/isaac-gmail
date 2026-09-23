@@ -93,7 +93,7 @@
 
   (describe "check-config (isaac config validate)"
 
-    (it "flags an action outside :converse/:ignore, naming the route"
+    (it "flags an action outside :converse/:ignore/:task, naming the route"
       (let [cfg {:gmail-routes {:broken {:order 10 :match {:from "*@tonotop.com"} :action :archive}}}]
         (should= [{:key "gmail-routes.broken.action" :value "unknown action :archive for route \"broken\""}]
                  (:errors (sut/check-config {:config cfg})))))
@@ -107,4 +107,40 @@
     (it "is silent on a well-formed table"
       (let [cfg {:gmail-routes {:ops {:order 10 :match {:from "*@tonotop.com"} :action :converse :crew "ops"}
                                 :nl  {:order 30 :match {:from "*@substack.com"} :action :ignore}}}]
+        (should= [] (:errors (sut/check-config {:config cfg})))))
+
+    (it "flags a :task route with no :match :from (isaac-3427)"
+      (let [cfg {:gmail-routes {:invoices {:order 20 :match {} :action :task :band "ops-inbox"}}}]
+        (should= [{:key   "gmail-routes.invoices.match.from"
+                   :value "route \"invoices\" is a :task route and must name :match :from"}]
+                 (:errors (sut/check-config {:config cfg})))))
+
+    (it "flags a :task route with no :band (isaac-3427)"
+      (let [cfg {:gmail-routes {:invoices {:order 20 :match {:from "*@tonotop.com"} :action :task}}}]
+        (should= [{:key   "gmail-routes.invoices.band"
+                   :value "route \"invoices\" is a :task route and must name :band"}]
+                 (:errors (sut/check-config {:config cfg})))))
+
+    (it "is silent on a well-formed :task route"
+      (let [cfg {:gmail-routes {:invoices {:order 20 :match {:from "*@tonotop.com"} :action :task :band "ops-inbox"}}}]
         (should= [] (:errors (sut/check-config {:config cfg})))))))
+
+(describe "gmail routes/decide - :task routes (isaac-3427)"
+
+  (it "known-actions includes :task"
+    (should (contains? sut/known-actions :task)))
+
+  (it "carries :band and :ack forward on a matching :task route"
+    (let [cfg {:gmail-routes {:invoices {:order 20 :match {:from "*@tonotop.com"} :action :task
+                                        :band "ops-inbox" :ack true}}}]
+      (should= {:route "invoices" :action :task :crew nil :band "ops-inbox" :ack true :gate nil :blocked #{}}
+               (sut/decide cfg (msg {})))))
+
+  (it "carries no :ack key when the route doesn't set one"
+    (let [cfg {:gmail-routes {:invoices {:order 20 :match {:from "*@tonotop.com"} :action :task :band "ops-inbox"}}}]
+      (should-not (contains? (sut/decide cfg (msg {})) :ack))))
+
+  (it "carries the route's own :params forward when given"
+    (let [cfg {:gmail-routes {:invoices {:order 20 :match {:from "*@tonotop.com"} :action :task
+                                        :band "ops-inbox" :params {:priority "high"}}}}]
+      (should= {:priority "high"} (:params (sut/decide cfg (msg {})))))))

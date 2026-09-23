@@ -42,6 +42,12 @@
     (g/dissoc! :gmail-access-token)
     (g/dissoc! :gmail-watch-pushed)
     (g/dissoc! :gmail-watch-grant)
+    (g/dissoc! :hail-sent)
+    ;; the hail module stub (isaac.hail.queue) is interned by "Given the hail
+    ;; module is installed" and never `require`d, so removing the ns is
+    ;; enough to make requiring-resolve fail again for the next scenario
+    ;; (isaac-3427).
+    (when (find-ns 'isaac.hail.queue) (remove-ns 'isaac.hail.queue))
     (google-registration/reset-registrations!)))
 
 (defn- kv-cells->map [cells]
@@ -381,6 +387,11 @@
       (let [cfg (:config (loader/load-config-result {:root root :fs fs*}))]
         (config/dangerously-install-config! cfg "gmail feature")
         (grover/clear-provider-requests!)
+        ;; Scope outbound-HTTP assertions to this push, same as the grover
+        ;; clear above — a scenario with two pushes (e.g. the ack toggle in
+        ;; tasks.feature) asserts each push's own outbound requests, not the
+        ;; cumulative scenario history (isaac-3427).
+        (g/assoc! :outbound-http-requests [])
         (when-let [comm (g/get :gmail-comm)]
           (reset! (.-cfg comm) (or (get-in cfg [:comms :gmail])
                                    (get-in cfg [:comms "gmail"])
@@ -420,6 +431,46 @@
             (fn []
               (google-registration/tick! {:now now :root root :door-up? true}))))))))
 
+(defn hail-module-installed
+  "Stub isaac.hail.queue/send! by interning it directly (not `require`,
+   which would mark the lib loaded and defeat the after-scenario cleanup) so
+   isaac.comm.gmail.tasks' requiring-resolve finds it, same as a real
+   isaac-hail install would. Every record it's called with is captured under
+   :hail-sent for the Then steps (isaac-3427)."
+  []
+  (create-ns 'isaac.hail.queue)
+  (intern 'isaac.hail.queue 'send!
+          (fn [record]
+            (g/update! :hail-sent (fnil conj []) record)
+            record)))
+
+(defn- hails-sent [] (or (g/get :hail-sent) []))
+
+(defn- hails-for-band [band]
+  (filter #(= band (get-in % [:frequencies :band])) (hails-sent)))
+
+(defn one-hail-sent-to-band [band table]
+  (let [matches (hails-for-band band)]
+    (g/should= 1 (count matches))
+    (let [record (first matches)]
+      (doseq [{path "path" value "value"} (table-rows table)]
+        (g/should= value (str (get-in record [:params (keyword path)])))))))
+
+(defn no-hail-was-sent []
+  (g/should (empty? (hails-sent))))
+
+(defn- regex-cell
+  "The pattern string out of a `#\"...\"` table cell, or nil for a literal
+   cell (TABLES.md's shared Cell Syntax: full-string regex match, DOTALL)."
+  [v]
+  (when (string? v)
+    (second (re-matches #"(?s)#\"(.*)\"" v))))
+
+(defn- cell-matches? [expected actual]
+  (if-let [pattern (regex-cell expected)]
+    (boolean (re-find (java.util.regex.Pattern/compile pattern java.util.regex.Pattern/DOTALL) (str actual)))
+    (= expected actual)))
+
 (defn- header-from-raw [raw name]
   (when (seq raw)
     (let [decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw))
@@ -449,8 +500,8 @@
     (doseq [[k v] expected]
       (let [key (str k)]
         (case key
-          "text" (g/should= v (body-from-raw raw))
-          (g/should= v (header-from-raw raw key)))))
+          "text" (g/should (cell-matches? v (body-from-raw raw)))
+          (g/should (cell-matches? v (header-from-raw raw key))))))
     (g/should (seq decoded))))
 
 (defgiven "the gmail history cursor is {id:string}"
@@ -513,4 +564,13 @@
 
 (defthen #"isaac config validate reports an unknown action for route \"([^\"]+)\""
   isaac.gmail-steps/config-validate-reports-unknown-action-for-route)
+
+(defgiven "the hail module is installed"
+  isaac.gmail-steps/hail-module-installed)
+
+(defthen #"one hail was sent to band \"([^\"]+)\" with:"
+  isaac.gmail-steps/one-hail-sent-to-band)
+
+(defthen "no hail was sent"
+  isaac.gmail-steps/no-hail-was-sent)
 

@@ -22,9 +22,10 @@
     [isaac.comm.gmail.gate :as gate]))
 
 (def known-actions
-  "Actions this bean implements. :task lands in isaac-3427 — until then it is
-   as unknown as any other bad value, named in the config-validate error."
-  #{:converse :ignore})
+  "Actions this bean implements: :converse and :ignore (isaac-sb6d), and
+   :task — send the message as a hail on a band instead of starting a thread
+   session (isaac-3427)."
+  #{:converse :ignore :task})
 
 ;; region ----- config -----
 
@@ -155,13 +156,16 @@
 ;; endregion ^^^^^ matching ^^^^^
 
 (defn decide
-  "{:route <name-string> :action :converse|:ignore|:unrouted
-    :crew <string-or-nil> :gate <keyword-or-nil> :blocked <#{route-name}>}
+  "{:route <name-string> :action :converse|:ignore|:task|:unrouted
+    :crew <string-or-nil> :gate <keyword-or-nil> :blocked <#{route-name}>
+    :band <string-or-absent> :ack <bool-or-absent> :params <map-or-absent>}
    for `message` against `cfg`'s gmail-routes table. Routes are the
    whitelist: with zero routes configured, or none matching, the message is
    :unrouted — nothing converses. `:blocked` names any route a *@domain
    pattern matched but Gmail did not authenticate — the handler warn-logs
-   :unauthenticated for those instead of the quieter :unrouted info log."
+   :unauthenticated for those instead of the quieter :unrouted info log.
+   :band, :ack, and :params only appear when the matched route sets them —
+   a :task route always sets :band (isaac-3427)."
   [cfg message]
   (let [ignore-cats (ignore-categories cfg)
         signal      (gate-signal message ignore-cats)]
@@ -173,8 +177,11 @@
           (let [route (first rs)
                 {:keys [match? blocked?]} (match-route route message)]
             (cond
-              match?   {:route (:name route) :action (:action route) :crew (:crew route)
-                        :gate nil :blocked blocked}
+              match?   (cond-> {:route (:name route) :action (:action route) :crew (:crew route)
+                                :gate nil :blocked blocked}
+                         (:band route)          (assoc :band (:band route))
+                         (contains? route :ack)  (assoc :ack (:ack route))
+                         (:params route)         (assoc :params (:params route)))
               blocked? (recur (rest rs) (conj blocked (:name route)))
               :else    (recur (rest rs) blocked))))))))
 
@@ -199,9 +206,14 @@
              [{:key   (str "gmail-routes." name ".action")
                :value (str "unknown action " (pr-str action) " for route " (pr-str name))}]
 
-             (and (= :converse action) (not (seq (get-in route [:match :from]))))
+             (and (#{:converse :task} action) (not (seq (get-in route [:match :from]))))
              [{:key   (str "gmail-routes." name ".match.from")
-               :value (str "route " (pr-str name) " is a :converse route and must name :match :from")}]
+               :value (str "route " (pr-str name) " is a :" (clojure.core/name action)
+                          " route and must name :match :from")}]
+
+             (and (= :task action) (not (seq (:band route))))
+             [{:key   (str "gmail-routes." name ".band")
+               :value (str "route " (pr-str name) " is a :task route and must name :band")}]
 
              :else [])))
        (ordered-routes config)))

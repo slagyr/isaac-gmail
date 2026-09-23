@@ -1,5 +1,5 @@
 {:id          :isaac.comm.gmail
- :version     "0.2.0"
+ :version     "0.2.1"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
@@ -20,7 +20,9 @@
                                                      :spec        {:type :string}
                                                      :description "Gmail category labels that gate a message to :ignore before any route runs. Default CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES, CATEGORY_FORUMS."}
                          :gmail/ignore-marks-read  {:type        :boolean
-                                                     :description "Remove Gmail's UNREAD label from a message an :ignore route (or the gate) drops. Default true."}}}}
+                                                     :description "Remove Gmail's UNREAD label from a message an :ignore route (or the gate) drops. Default true."}
+                         :gmail/task-body-cap      {:type        :int
+                                                     :description "Character cap on a :task route's body-excerpt param. Default 4000. The full message stays readable through the gmail__read tool by id (isaac-3427)."}}}}
 
  ;; Mailbox tools on Isaac's own token and the crew's allow-list (isaac-jqk2).
  :isaac.agent/tools
@@ -50,7 +52,7 @@
    {:name        :gmail-routes
     :type        :map
     :snapshot-only? true
-    :description "Named Gmail routing rules (map of route name -> route), ordered by :order ascending (ties by name — a map carries no order of its own). One .edn file per route under config/gmail-routes/, or inline. First match wins; a message no route claims is :unrouted. Routes are the whitelist: a :converse route must name :match :from (isaac-sb6d)."
+    :description "Named Gmail routing rules (map of route name -> route), ordered by :order ascending (ties by name — a map carries no order of its own). One .edn file per route under config/gmail-routes/, or inline. First match wins; a message no route claims is :unrouted. Routes are the whitelist: a :converse or :task route must name :match :from (isaac-sb6d, isaac-3427)."
     :key-spec    {:type :string}
     :value-spec
     {:name   :gmail-route
@@ -65,7 +67,7 @@
                                  :label   {:type :string}
                                  :list-id {:type :string}}}
               :action  {:type        :keyword
-                        :description "How a matched message is handled: :converse or :ignore. (:task lands in isaac-3427; an unknown action is a config-validate error naming the route.)"}
+                        :description "How a matched message is handled: :converse, :ignore, or :task (send a hail instead of starting a thread session). An unknown action is a config-validate error naming the route."}
               :crew    {:type        :string
                         :description "Crew for a :converse route; default gmail/crew."}
               :comm    {:type        :keyword
@@ -73,9 +75,11 @@
               :desc    {:type        :string
                         :description "Shown to the triage model fallback (isaac-betb)."}
               :band    {:type        :string
-                        :description "Reserved for a :task route (isaac-3427)."}
+                        :description "Hail band for a :task route; required (isaac-3427)."}
               :ack     {:type        :boolean
-                        :description "Reserved for a :task route (isaac-3427)."}}}}}}
+                        :description "A :task route replies once on the thread (\"Got it — filed as ...\") when true. Default false — no reply (isaac-3427)."}
+              :params  {:type        :map
+                        :description "Extra hail :params for a :task route, merged under the mail payload — gmail/id, gmail/thread-id, from, subject, body-excerpt win on a key collision (isaac-3427)."}}}}}}
 
  :isaac.config/check
  {:gmail-routes {:fn isaac.comm.gmail.routes/check-config}}
