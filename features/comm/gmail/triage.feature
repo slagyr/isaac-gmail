@@ -1,6 +1,7 @@
 Feature: Gmail triage fallback for unrouted mail
   When gmail/triage is configured, an unrouted message (one no route claims)
-  runs one turn in a dedicated, reset-context session gmail-triage instead of
+  (a sender no route names — a colleague is already routed by team) runs one
+  turn in a dedicated, reset-context session gmail-triage instead of
   going straight to :unrouted. The model picks one route name or "ignore";
   anything else falls back to gmail/triage.default. The verdict is always
   recorded as label isaac/triage/<verdict>. With gmail/triage.apply false
@@ -36,7 +37,7 @@ Feature: Gmail triage fallback for unrouted mail
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com |
+      | from    | pat@example.com |
       | to      | yopp@tonotop.com |
       | subject | Quick question  |
       | body    | Are you free?   |
@@ -65,7 +66,7 @@ Feature: Gmail triage fallback for unrouted mail
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com |
+      | from    | pat@example.com |
       | to      | yopp@tonotop.com |
       | subject | Quick question  |
       | body    | Are you free?   |
@@ -116,7 +117,7 @@ Feature: Gmail triage fallback for unrouted mail
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com  |
+      | from    | pat@example.com  |
       | to      | yopp@tonotop.com |
       | subject | First one        |
       | body    | Hello            |
@@ -129,7 +130,7 @@ Feature: Gmail triage fallback for unrouted mail
       | id  | threadId |
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com  |
+      | from    | pat@example.com  |
       | to      | yopp@tonotop.com |
       | subject | Second one       |
       | body    | Hi again         |
