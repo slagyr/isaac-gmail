@@ -80,7 +80,7 @@ Feature: Gmail triage fallback for unrouted mail
     And message "m-1" carries label "isaac/team"
     And session "gmail-t-1" has transcript matching:
       | type    | message.role | message.crew | message.content       |
-      | message | user         | main         | #".*Are you free\?.*" |
+      | message | user         |              | #".*Are you free\?.*" |
       | message | assistant    | main         | Yes, 3pm.              |
 
   @wip
@@ -141,8 +141,8 @@ Feature: Gmail triage fallback for unrouted mail
     Then message "m-2" carries label "isaac/triage/team"
     And session "gmail-triage" has transcript matching:
       | #index | type    | message.role | message.content   |
-      | 0      | message | user         | #".*Second one.*" |
-      | 1      | message | assistant    | team               |
+      | 1      | message | user         | #".*Second one.*" |
+      | 2      | message | assistant    | team               |
 
   @wip
   Scenario: without gmail/triage configured, an unrouted message behaves as in the routes bean
