@@ -4,7 +4,8 @@ Feature: Gmail comm
   routes each thread to one session. Replies go out on the thread with
   the headers mail clients need. The push step hands the watch payload to
   the handler this module contributed to :isaac.google/handler, the way
-  the Chat steps do. Bean: isaac-cr0o.
+  the Chat steps do. Bean: isaac-cr0o. Senders are admitted by gmail-routes
+  (isaac-sb6d), not by an allow-list.
 
   Background:
     Given default Grover setup in "/test/gmail"
@@ -12,12 +13,15 @@ Feature: Gmail comm
       | log.output                   | memory              |
       | google.tonotop.project       | marigold            |
       | comms.gmail.gmail/account    | yopp@tonotop.com    |
-      | comms.gmail.gmail/allow-from | ["ada@tonotop.com"] |
       | comms.gmail.gmail/crew       | main                |
+      | gmail-routes.team.order      | 90                  |
+      | gmail-routes.team.match.from | ada@tonotop.com     |
+      | gmail-routes.team.action     | converse            |
       | sessions.naming-strategy     | sequential          |
     And the google auth store has access "at-1" and refresh "rt-1"
     And the gmail history cursor is "1000"
 
+  @wip
   Scenario: a watch push after two new INBOX messages starts one turn per thread
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -49,6 +53,7 @@ Feature: Gmail comm
       | message | assistant    | Yes.                |
     And the gmail history cursor is "1042"
 
+  @wip
   Scenario: a reply goes out on the originating thread with the headers clients need
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -74,6 +79,7 @@ Feature: Gmail comm
       | References  | <abc@tonotop.com> |
       | text        | Friday works.     |
 
+  @wip
   Scenario: an already-processed push starts nothing
     Given the gmail history cursor is "1042"
     When Gmail pushes a watch notification with history id "1042"
@@ -81,6 +87,7 @@ Feature: Gmail comm
     And grover records zero provider requests
     And no outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/history" was made
 
+  @wip
   Scenario: a stale cursor resyncs from the inbox and continues
     Given the Gmail API history since "1000" is gone
     And the Gmail API inbox lists messages:
@@ -104,7 +111,8 @@ Feature: Gmail comm
       | message | assistant    | Yes.                  |
     And the gmail history cursor is "2001"
 
-  Scenario: sent mail, label-only changes, and unknown senders never start a turn
+  @wip
+  Scenario: sent mail, label-only changes, and senders no route names never start a turn
     Given the Gmail API history since "1000" contains:
       | kind         | id  | threadId | labelIds   |
       | labelAdded   | m-3 | t-3      | STARRED    |
@@ -121,12 +129,18 @@ Feature: Gmail comm
     And the log has entries matching:
       | level  | event                  | reason     |
       | :debug | :gmail/message-dropped | :not-inbox |
-      | :debug | :gmail/message-dropped | :sender    |
+    And the log has entries matching:
+      | level | event           | from                |
+      | :info | :gmail/unrouted | mallory@example.com |
+    And message "m-5" carries label "isaac/unrouted"
     And the gmail history cursor is "1099"
 
-  Scenario: a *@domain allow-list entry admits the domain only when Gmail authenticates it (isaac-dymn)
+  @wip
+  Scenario: a *@domain route admits the domain only when Gmail authenticates it (isaac-dymn, isaac-sb6d)
     Given config:
-      | comms.gmail.gmail/allow-from | ["*@tonotop.com"] |
+      | gmail-routes.domain.order      | 10            |
+      | gmail-routes.domain.match.from | *@tonotop.com |
+      | gmail-routes.domain.action     | converse      |
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-6 | t-6      |
@@ -152,6 +166,7 @@ Feature: Gmail comm
       | message | user         | #".*Ship it.*Friday\?.*" |
       | message | assistant    | Friday.                  |
     And the session count is 1
+    And message "m-6" carries label "isaac/domain"
     And the log has entries matching:
       | level | event                  | reason           |
       | :warn | :gmail/message-dropped | :unauthenticated |

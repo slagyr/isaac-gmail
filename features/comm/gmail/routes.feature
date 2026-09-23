@@ -4,8 +4,8 @@ Feature: Gmail routes and verdict labels
   Routes are the whitelist: a :converse or :task route must name :match :from,
   and a *@domain pattern only admits a sender Gmail authenticated. The first
   matching route wins. Every gated message — routed, ignored, or unrouted —
-  gets a Gmail label isaac/<route-name> (or isaac/ignored, isaac/unrouted,
-  isaac/default with no routes configured) before any turn starts, so the
+  gets a Gmail label isaac/<route-name> (or isaac/ignored, isaac/unrouted;
+  with no routes configured nothing converses) before any turn starts, so the
   label is both an audit trail and the idempotency check that lets two hosts
   (push + pull) share one inbox safely. Bean: isaac-sb6d.
 
@@ -28,6 +28,8 @@ Feature: Gmail routes and verdict labels
       | gmail-routes.ops.match.from | *@tonotop.com |
       | gmail-routes.ops.action     | converse      |
       | gmail-routes.ops.crew       | ops           |
+      | crew.ops.model              | grover        |
+      | crew.ops.soul               | You are Ops.  |
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
@@ -198,26 +200,6 @@ Feature: Gmail routes and verdict labels
     Then the Gmail API created label "isaac/ops" 1 times
 
   @wip
-  Scenario: no routes configured behaves as before, but still labels the default route
-    Given the Gmail API history since "1000" adds messages:
-      | id  | threadId |
-      | m-1 | t-1      |
-    And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com     |
-      | to      | yopp@tonotop.com    |
-      | subject | Deploy window       |
-      | body    | Can we ship Friday? |
-    And the following model responses are queued:
-      | model | type | content       |
-      | echo  | text | Friday works. |
-    When Gmail pushes a watch notification with history id "1042"
-    Then session "gmail-t-1" has transcript matching:
-      | type    | message.role | message.content                                    |
-      | message | user         | #".*ada@tonotop.com.*Deploy window.*ship Friday.*" |
-      | message | assistant    | Friday works.                                      |
-    And message "m-1" carries label "isaac/default"
-
-  @wip
   Scenario: a route may live in its own config file
     Given config file "gmail-routes/ops.edn" containing:
       """
@@ -270,14 +252,9 @@ Feature: Gmail routes and verdict labels
       | to      | yopp@tonotop.com    |
       | subject | This week's reads   |
       | body    | Top 5 links         |
-    And the following model responses are queued:
-      | model | type | content |
-      | echo  | text | Noted.  |
     When Gmail pushes a watch notification with history id "1042"
-    Then session "gmail-t-1" has transcript matching:
-      | type    | message.role | message.content  |
-      | message | user         | #".*This week.*" |
-      | message | assistant    | Noted.            |
+    Then message "m-1" carries label "isaac/unrouted"
+    And the session count is 0
 
     Given config file "gmail-routes/newsletters.edn" containing:
       """
@@ -294,7 +271,7 @@ Feature: Gmail routes and verdict labels
       | body    | Top 5 links again   |
     When Gmail pushes a watch notification with history id "1099"
     Then message "m-2" carries label "isaac/newsletters"
-    And the session count is 1
+    And the session count is 0
 
   @wip
   Scenario: an unknown route action is reported by config validation, naming the route
