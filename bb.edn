@@ -42,7 +42,7 @@
                                                     :git/sha "71a04136404c37fa09a681bc14ac79663a7e4e53"
                                                     :deps/root "spec-support"}
         io.github.slagyr/isaac-google {:git/url "https://github.com/slagyr/isaac-google.git"
-                                       :git/sha "6fbd5d7681d140c18294760897d5235bf1cb5b51"}}
+                                       :git/sha "134f2a1d1dd4b4efd217cce41710e672c36cc151"}}
 
  :tasks
  {config-bypass-lint {:doc "Fail on raw config slurp/read outside isaac.config.* (isaac-foundation-test-support)"
