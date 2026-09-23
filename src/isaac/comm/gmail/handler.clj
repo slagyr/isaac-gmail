@@ -20,6 +20,7 @@
     [isaac.comm.gmail.message :as message]
     [isaac.comm.gmail.routes :as routes]
     [isaac.comm.gmail.tasks :as tasks]
+    [isaac.comm.gmail.triage :as triage]
     [isaac.comm.registry :as comm-registry]
     [isaac.config.defaults :as defaults]
     [isaac.config.loader :as loader]
@@ -119,15 +120,36 @@
   (labels/apply-label! (tenant-of cfg) (gmail-slice cfg) merged (:route decision)
                        :remove-unread? (and (= :ignore (:action decision)) (ignore-marks-read? cfg))))
 
+(declare dispatch-decision!)
+
+(defn- triage-decision!
+  "The message is :unrouted and gmail/triage is configured: run the triage
+   turn, always label isaac/triage/<verdict>, log one line, and — with
+   gmail/triage.apply true and the verdict naming a real route — redispatch
+   through that route's own action so its own label lands too (isaac-betb)."
+  [cfg merged]
+  (let [verdict (triage/decide! cfg merged)
+        route   (when (triage/apply? cfg) (routes/find-route cfg verdict))]
+    (labels/apply-label! (tenant-of cfg) (gmail-slice cfg) merged (str "triage/" verdict))
+    (log/info :gmail/triage-verdict :id (:id merged) :from (:from merged)
+             :subject (:subject merged) :verdict verdict :applied? (boolean route))
+    (when route
+      (dispatch-decision! cfg merged (routes/route-decision route)))))
+
 (defn- dispatch-decision! [cfg merged decision]
-  (label-message! cfg merged decision)
-  (case (:action decision)
-    :converse (start-turn! merged cfg (or (:crew decision) (default-crew cfg)))
-    :task     (tasks/dispatch! (tenant-of cfg) (gmail-slice cfg) merged decision)
-    :unrouted (if (seq (:blocked decision))
-               (log/warn :gmail/message-dropped :reason :unauthenticated :id (:id merged) :from (:from merged))
-               (log/info :gmail/unrouted :from (:from merged) :subject (:subject merged)))
-    :ignore   nil))
+  (if (and (= :unrouted (:action decision))
+          (empty? (:blocked decision))
+          (triage/configured? cfg))
+    (triage-decision! cfg merged)
+    (do
+      (label-message! cfg merged decision)
+      (case (:action decision)
+        :converse (start-turn! merged cfg (or (:crew decision) (default-crew cfg)))
+        :task     (tasks/dispatch! (tenant-of cfg) (gmail-slice cfg) merged decision)
+        :unrouted (if (seq (:blocked decision))
+                   (log/warn :gmail/message-dropped :reason :unauthenticated :id (:id merged) :from (:from merged))
+                   (log/info :gmail/unrouted :from (:from merged) :subject (:subject merged)))
+        :ignore   nil))))
 
 (defn- enrich [stub]
   ;; The fetched record is authoritative; the history-walk stub only fills

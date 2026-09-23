@@ -1,5 +1,5 @@
 {:id          :isaac.comm.gmail
- :version     "0.2.2"
+ :version     "0.2.3"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
@@ -84,7 +84,20 @@
               :ack     {:type        :boolean
                         :description "A :task route replies once on the thread (\"Got it — filed as ...\") when true. Default false — no reply (isaac-3427)."}
               :params  {:type        :map
-                        :description "Extra hail :params for a :task route, merged under the mail payload — gmail/id, gmail/thread-id, from, subject, body-excerpt win on a key collision (isaac-3427)."}}}}}}
+                        :description "Extra hail :params for a :task route, merged under the mail payload — gmail/id, gmail/thread-id, from, subject, body-excerpt win on a key collision (isaac-3427)."}}}}}
+
+   :gmail/triage
+   {:schema
+    {:name        :gmail-triage
+     :type        :map
+     :snapshot-only? true
+     :description "Triage fallback for unrouted Gmail mail (isaac-betb): when :model is set, a message routes/decide reports :unrouted (and not auth-blocked) runs one turn in a dedicated, reset-context session instead of going straight to :unrouted. The model picks one of :choices or \"ignore\"; anything else falls back to :default. The verdict is always recorded as label isaac/triage/<verdict>. With :apply true the message is then dispatched as if its verdict route had matched, so that route's own label lands too. It never overrides a route routes/decide already matched."
+     :schema
+     {:model   {:type :string :description "Model alias for the one-off triage turn."}
+      :crew    {:type :string :description "Crew id whose config (aside from :tools, replaced with deny-all for this call) resolves the triage turn. Default \"main\"."}
+      :choices {:type :seq :spec {:type :string} :description "Route names the model may answer with, plus the literal \"ignore\"."}
+      :default {:type :string :description "Verdict used when the model's answer is neither \"ignore\" nor one of :choices. Default \"ignore\"."}
+      :apply   {:type :boolean :description "Redispatch the message through the matched route's own action when true. Default false — audit-only."}}}}}
 
  :isaac.config/check
  {:gmail-routes {:fn isaac.comm.gmail.routes/check-config}}

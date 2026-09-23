@@ -25,7 +25,6 @@ Feature: Gmail triage fallback for unrouted mail
     And the google auth store has access "at-1" and refresh "rt-1"
     And the gmail history cursor is "1000"
 
-  @wip
   Scenario: an unrouted message runs one triage turn and labels the verdict without dispatching it
     Given config:
       | gmail/triage.model   | echo                            |
@@ -54,7 +53,6 @@ Feature: Gmail triage fallback for unrouted mail
     And message "m-1" carries label "isaac/triage/team"
     And the session count is 1
 
-  @wip
   Scenario: apply true dispatches the message as if the verdict route had matched
     Given config:
       | gmail/triage.model   | echo                            |
@@ -83,7 +81,6 @@ Feature: Gmail triage fallback for unrouted mail
       | message | user         |              | #".*Are you free\?.*" |
       | message | assistant    | main         | Yes, 3pm.              |
 
-  @wip
   Scenario: a verdict outside the configured choices falls back to the default
     Given config:
       | gmail/triage.model   | echo                            |
@@ -105,7 +102,6 @@ Feature: Gmail triage fallback for unrouted mail
     When Gmail pushes a watch notification with history id "1042"
     Then message "m-1" carries label "isaac/triage/ignore"
 
-  @wip
   Scenario: the triage session resets between messages instead of accumulating transcript
     Given config:
       | gmail/triage.model   | echo                            |
@@ -144,7 +140,6 @@ Feature: Gmail triage fallback for unrouted mail
       | 1      | message | user         | #".*Second one.*" |
       | 2      | message | assistant    | team               |
 
-  @wip
   Scenario: without gmail/triage configured, an unrouted message behaves as in the routes bean
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |

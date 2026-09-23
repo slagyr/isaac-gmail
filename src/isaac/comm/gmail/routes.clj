@@ -155,6 +155,24 @@
 
 ;; endregion ^^^^^ matching ^^^^^
 
+(defn route-decision
+  "The decision map for `route` as if it had just matched via `decide` —
+   reused by the triage fallback (isaac-betb) to redispatch a message as if
+   its verdict route had matched."
+  [route]
+  (cond-> {:route (:name route) :action (:action route) :crew (:crew route)
+          :gate nil :blocked #{}}
+    (:band route)          (assoc :band (:band route))
+    (contains? route :ack)  (assoc :ack (:ack route))
+    (:params route)         (assoc :params (:params route))))
+
+(defn find-route
+  "The configured route named `route-name`, or nil when route-name is
+   \"ignore\", blank, or names no configured route (isaac-betb)."
+  [cfg route-name]
+  (when (and (seq route-name) (not= "ignore" route-name))
+    (first (filter #(= route-name (:name %)) (ordered-routes cfg)))))
+
 (defn decide
   "{:route <name-string> :action :converse|:ignore|:task|:unrouted
     :crew <string-or-nil> :gate <keyword-or-nil> :blocked <#{route-name}>
@@ -177,11 +195,7 @@
           (let [route (first rs)
                 {:keys [match? blocked?]} (match-route route message)]
             (cond
-              match?   (cond-> {:route (:name route) :action (:action route) :crew (:crew route)
-                                :gate nil :blocked blocked}
-                         (:band route)          (assoc :band (:band route))
-                         (contains? route :ack)  (assoc :ack (:ack route))
-                         (:params route)         (assoc :params (:params route)))
+              match?   (assoc (route-decision route) :blocked blocked)
               blocked? (recur (rest rs) (conj blocked (:name route)))
               :else    (recur (rest rs) blocked))))))))
 
