@@ -11,6 +11,7 @@
     [isaac.comm.gmail.history :as history]
     [isaac.comm.gmail.message :as message]
     [isaac.comm.registry :as comm-registry]
+    [isaac.config.defaults :as defaults]
     [isaac.config.loader :as loader]
     [isaac.config.root :as root]
     [isaac.fs :as fs]
@@ -51,14 +52,14 @@
         (and (string? c) (seq c)) c))
 
 (defn- crew
-  "The comm's own crew, else the operator's defaults.crew, else nil - the
-   drive resolves nil to defaults.crew itself and there is no crew named main
-   (isaac-rfmh, isaac-zule)."
+  "The comm's own crew, else the operator's default crew
+   ([:defaults :frequencies :crew]), else nil - the drive resolves nil to that
+   default itself and there is no crew named main (isaac-rfmh, isaac-zule)."
   [cfg]
   (let [slice (gmail-slice cfg)]
     (or (:gmail/crew slice)
         (:crew slice)
-        (crew-name (get-in cfg [:defaults :crew])))))
+        (crew-name (defaults/crew-id cfg)))))
 
 (defn- session-key [thread-id]
   (str "gmail-" thread-id))
