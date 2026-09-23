@@ -15,6 +15,9 @@ Feature: Gmail pull mode
       | comms.gmail.gmail/account | yopp@tonotop.com |
       | comms.gmail.gmail/crew    | main             |
       | sessions.naming-strategy  | sequential       |
+      | gmail-routes.team.order      | 90            |
+      | gmail-routes.team.match.from | *@tonotop.com |
+      | gmail-routes.team.action     | converse      |
     And the google auth store has access "at-1" and refresh "rt-1"
 
   @wip
