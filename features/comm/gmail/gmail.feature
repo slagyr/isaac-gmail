@@ -21,7 +21,6 @@ Feature: Gmail comm
     And the google auth store has access "at-1" and refresh "rt-1"
     And the gmail history cursor is "1000"
 
-  @wip
   Scenario: a watch push after two new INBOX messages starts one turn per thread
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -53,7 +52,6 @@ Feature: Gmail comm
       | message | assistant    | Yes.                |
     And the gmail history cursor is "1042"
 
-  @wip
   Scenario: a reply goes out on the originating thread with the headers clients need
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -79,7 +77,6 @@ Feature: Gmail comm
       | References  | <abc@tonotop.com> |
       | text        | Friday works.     |
 
-  @wip
   Scenario: an already-processed push starts nothing
     Given the gmail history cursor is "1042"
     When Gmail pushes a watch notification with history id "1042"
@@ -87,7 +84,6 @@ Feature: Gmail comm
     And grover records zero provider requests
     And no outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/history" was made
 
-  @wip
   Scenario: a stale cursor resyncs from the inbox and continues
     Given the Gmail API history since "1000" is gone
     And the Gmail API inbox lists messages:
@@ -111,7 +107,6 @@ Feature: Gmail comm
       | message | assistant    | Yes.                  |
     And the gmail history cursor is "2001"
 
-  @wip
   Scenario: sent mail, label-only changes, and senders no route names never start a turn
     Given the Gmail API history since "1000" contains:
       | kind         | id  | threadId | labelIds   |
@@ -135,7 +130,6 @@ Feature: Gmail comm
     And message "m-5" carries label "isaac/unrouted"
     And the gmail history cursor is "1099"
 
-  @wip
   Scenario: a *@domain route admits the domain only when Gmail authenticates it (isaac-dymn, isaac-sb6d)
     Given config:
       | gmail-routes.domain.order      | 10            |

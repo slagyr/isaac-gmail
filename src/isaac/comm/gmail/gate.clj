@@ -1,13 +1,14 @@
 (ns isaac.comm.gmail.gate
-  "Inbound Gmail gate: allow-from (fail closed), skip drafts/sent, INBOX only.
+  "Inbound Gmail gate: INBOX only, and does Gmail vouch for a sender's domain.
 
-   An allow-from entry is an address or a *@domain pattern. The two are not
-   equally safe: From: is written by the sender, so a pattern that opens a
-   whole domain is only honoured when Gmail says the message really came from
-   it — dmarc=pass, or spf and dkim both passing and aligned to the From
-   domain, as recorded in the Authentication-Results header Gmail adds on
-   delivery. An exact address keeps the behaviour it has always had: the
-   header is taken at its word (isaac-dymn)."
+   Routes are the whitelist now (isaac-sb6d): the old gmail/allow-from list is
+   retired and isaac.comm.gmail.routes decides what to do with a message.
+   This namespace keeps the two pieces of that decision that stay structural
+   rather than config-driven: whether a message is even INBOX mail, and
+   whether Gmail's Authentication-Results vouch for a *@domain route's
+   sender — a *@domain pattern is only honoured when dmarc=pass, or spf and
+   dkim both pass and are aligned to the From domain, exactly as the old
+   *@domain allow-from entries required (isaac-dymn)."
   (:require
     [clojure.string :as str]))
 
@@ -22,13 +23,12 @@
       (or (second (re-find #"<([^>]+)>" from))
           from))))
 
-(defn- domain-of [address]
-  (let [at (str/last-index-of (str address) "@")]
-    (when (and at (< (inc at) (count address)))
-      (subs address (inc at)))))
-
-(defn- pattern? [entry]
-  (str/starts-with? (str entry) "*@"))
+(defn not-inbox?
+  "True when a message is not live INBOX mail — sent by us, still a draft, or
+   never labelled INBOX at all."
+  [message]
+  (let [labs (labels message)]
+    (or (contains? labs "SENT") (contains? labs "DRAFT") (not (contains? labs "INBOX")))))
 
 (defn- verdicts
   "Authentication-Results → {\"dmarc\" \"pass\", \"spf\" \"pass\", …}. Gmail writes
@@ -56,25 +56,3 @@
       (and (seq (str (or domain "")))
            (or (= "pass" dmarc)
                (and (= "pass" spf) (= "pass" dkim) (aligned? message domain)))))))
-
-(defn drop-reason
-  "Nil when the message should start a turn; otherwise :not-inbox, :sender
-   (no allow-from entry names this sender) or :unauthenticated (a *@domain
-   entry names the sender's domain, but Gmail does not vouch for it)."
-  [message allow-from]
-  (let [labs    (labels message)
-        from    (address (or (:from-email message) (:from message)))
-        domain  (domain-of from)
-        entries (map str allow-from)
-        exact?  (some (fn [e] (and (not (pattern? e)) (= (str/lower-case e) from))) entries)
-        match?  (some (fn [e] (and (pattern? e) (seq domain) (= (str/lower-case (subs e 2)) domain))) entries)]
-    (cond
-      (or (contains? labs "SENT") (contains? labs "DRAFT") (not (contains? labs "INBOX")))
-      :not-inbox
-
-      (empty? entries) :sender
-      exact?           nil
-
-      (and match? (authenticated? message domain)) nil
-      match?                                       :unauthenticated
-      :else                                        :sender)))

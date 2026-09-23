@@ -9,7 +9,9 @@
     [isaac.comm.gmail :as gmail]
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
+    [isaac.comm.gmail.gate :as gate]
     [isaac.comm.gmail.handler :as handler]
+    [isaac.comm.gmail.labels :as gmail-labels]
     [isaac.comm.protocol :as comm]
     [isaac.comm.registry :as comm-registry]
     [isaac.config.api :as config]
@@ -31,6 +33,7 @@
 (g/after-scenario
   (fn []
     (alter-var-root #'discovery/*foundation-index-override* (constantly nil))
+    (gmail-labels/reset-cache!)
     (g/dissoc! :gmail-history)
     (g/dissoc! :gmail-messages)
     (g/dissoc! :gmail-inbox)
@@ -151,6 +154,16 @@
        :method "POST"
        :headers (:headers req)}
 
+      (and (re-find #"/messages/[^/?]+/modify" url) (= "POST" (str/upper-case (name (:method req "GET")))))
+      (let [id          (last (re-find #"/messages/([^/?]+)/modify" url))
+            add         (get-in req [:body :addLabelIds])
+            remove-ids  (set (get-in req [:body :removeLabelIds]))
+            existing    (get (g/get :gmail-messages) id)
+            current     (vec (or (:labelIds existing) ["INBOX"]))
+            updated     (vec (remove remove-ids (distinct (concat current add))))]
+        (g/update! :gmail-messages (fnil assoc {}) id (merge existing {:id id :labelIds updated}))
+        {:status 200 :body {:id id :labelIds updated} :url url :method "POST" :headers (:headers req)})
+
       (re-find #"/messages/[^/?]+" url)
       (let [id  (or (last (re-find #"/messages/([^/?]+)" url))
                     (get-in req [:query :id]))
@@ -202,20 +215,75 @@
   (g/assoc! :gmail-gone true)
   (g/update! :gmail-history (fnil assoc {}) (str since) {:status 404 :error :not-found}))
 
+(defn- synthesized-auth-results
+  "Test messages don't carry a real Authentication-Results header. Routes
+   scenarios care about matching, not authentication (that's gmail.feature's
+   isaac-dymn job), so a stub message authenticates for its own From domain
+   by default — a scenario that wants to test the :unauthenticated path (or
+   the old *@domain allow-from tests) overrides :auth-results explicitly, and
+   that override always wins."
+  [from]
+  (let [addr   (gate/address from)
+        domain (second (re-find #"@(.+)$" (str addr)))]
+    (when (seq domain)
+      (str "mx.google.com; dkim=pass header.d=" domain "; spf=pass smtp.mailfrom=" domain
+          "; dmarc=pass header.from=" domain))))
+
 (defn returns-message [id table]
   (let [m        (table-map table)
         existing (get (g/get :gmail-messages) id)
+        from     (or (get m "from") (get m :from))
         msg      {:id         id
-                  :from       (or (get m "from") (get m :from))
+                  :from       from
                   :to         (or (get m "to") (get m :to))
                   :subject    (or (get m "subject") (get m :subject))
                   :message-id (or (get m "message-id") (get m :message-id))
                   :body       (or (get m "body") (get m :body))
-                  :auth-results (or (get m "auth-results") (get m :auth-results))
+                  :auth-results (or (get m "auth-results") (get m :auth-results)
+                                    (synthesized-auth-results from))
+                  :precedence (or (get m "precedence") (get m :precedence))
                   :labelIds   (or (:labelIds existing) ["INBOX"])
                   :threadId   (or (get m "threadId") (get m :threadId) (:threadId existing))
                   :historyId  (or (get m "historyId") (:historyId existing))}]
     (g/update! :gmail-messages (fnil assoc {}) id (merge existing msg))))
+
+(defn message-already-carries-label [id label]
+  (g/update! :gmail-messages
+             (fnil update {})
+             id
+             (fn [existing]
+               (let [current (vec (or (:labelIds existing) ["INBOX"]))]
+                 (merge {:id id} existing {:labelIds (vec (distinct (conj current label)))})))))
+
+(defn message-carries-label [id label]
+  (let [labs (:labelIds (get (g/get :gmail-messages) id))]
+    (g/should (contains? (set labs) label))))
+
+(defn message-does-not-carry-label [id label]
+  (let [labs (:labelIds (get (g/get :gmail-messages) id))]
+    (g/should-not (contains? (set labs) label))))
+
+(defn label-created-times [name n]
+  (let [n       (if (string? n) (parse-long n) n)
+        reqs    (or (g/get :outbound-http-requests) [])
+        matches (filter (fn [r] (and (str/includes? (str (:url r)) "/labels")
+                                     (= "POST" (:method r))
+                                     (= name (get-in r [:body :name]))))
+                        reqs)]
+    (g/should= n (count matches))))
+
+(defn config-validate-reports-unknown-action-for-route [route-name]
+  (ensure-gmail-factory!)
+  (inject-gmail-module!)
+  (let [fs*    (feature-fs)
+        root   (root-dir)
+        result (nexus/-with-nested-nexus {:fs fs* :root root}
+                 (loader/load-config-result {:root root :fs fs*}))
+        errors (:errors result)]
+    (g/should (some (fn [e]
+                      (and (str/includes? (str (:key e)) (str "gmail-routes." route-name))
+                           (re-find #"(?i)unknown action" (str (:value e)))))
+                    errors))))
 
 (defn inbox-lists [table]
   (let [rows (mapv (fn [row]
@@ -430,4 +498,19 @@
 
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)
+
+(defgiven #"message \"([^\"]+)\" already carries label \"([^\"]+)\""
+  isaac.gmail-steps/message-already-carries-label)
+
+(defthen #"message \"([^\"]+)\" carries label \"([^\"]+)\""
+  isaac.gmail-steps/message-carries-label)
+
+(defthen #"message \"([^\"]+)\" does not carry label \"([^\"]+)\""
+  isaac.gmail-steps/message-does-not-carry-label)
+
+(defthen #"the Gmail API created label \"([^\"]+)\" (\d+) times"
+  isaac.gmail-steps/label-created-times)
+
+(defthen #"isaac config validate reports an unknown action for route \"([^\"]+)\""
+  isaac.gmail-steps/config-validate-reports-unknown-action-for-route)
 

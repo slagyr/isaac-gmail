@@ -1,20 +1,26 @@
 {:id          :isaac.comm.gmail
- :version     "0.1.9"
+ :version     "0.2.0"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
 
  :isaac.agent/comm
  {:gmail {:namespace    isaac.comm.gmail
-          :extra-schema {:gmail/google     {:type        :keyword
-                                            :description "Google organization (tenant) this comm speaks for: it sends with that organization's token and its mailbox is watched against that organization's topic. Omit on a host with one organization."}
-                         :gmail/account    {:type        :string
-                                            :description "Google account email of the Isaac user."}
-                         :gmail/allow-from {:type        :seq
-                                            :spec        {:type :string}
-                                            :description "Inbound allowlist of senders: an address, or *@domain for a whole domain. From: is written by the sender, so a *@domain entry is honoured only when Gmail's Authentication-Results vouch for that domain (dmarc=pass, or spf and dkim both passing and aligned); an exact address is taken at its word. Missing or empty = fail-closed."}
-                         :gmail/crew       {:type        :string
-                                            :description "Crew for session selection or creation."}}}}
+          :extra-schema {:gmail/google             {:type        :keyword
+                                                     :description "Google organization (tenant) this comm speaks for: it sends with that organization's token and its mailbox is watched against that organization's topic. Omit on a host with one organization."}
+                         :gmail/account            {:type        :string
+                                                     :description "Google account email of the Isaac user."}
+                         :gmail/allow-from         {:type        :ignore
+                                                     :validations [[:retired? "use gmail-routes — a :converse route names :match :from"]]}
+                         :gmail/crew               {:type        :string
+                                                     :description "Default crew for a route with no :crew of its own, or for every message when no gmail-routes are configured at all."}
+                         :gmail/label-prefix       {:type        :string
+                                                     :description "Prefix for verdict labels (isaac/<route>, isaac/ignored, isaac/unrouted). Default \"isaac\"."}
+                         :gmail/ignore-categories  {:type        :seq
+                                                     :spec        {:type :string}
+                                                     :description "Gmail category labels that gate a message to :ignore before any route runs. Default CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES, CATEGORY_FORUMS."}
+                         :gmail/ignore-marks-read  {:type        :boolean
+                                                     :description "Remove Gmail's UNREAD label from a message an :ignore route (or the gate) drops. Default true."}}}}
 
  ;; Mailbox tools on Isaac's own token and the crew's allow-list (isaac-jqk2).
  :isaac.agent/tools
@@ -27,7 +33,7 @@
  {"gmail/watch" isaac.comm.gmail.handler/handle-watch!}
 
  :isaac.google/scopes
- ["https://www.googleapis.com/auth/gmail.readonly"
+ ["https://www.googleapis.com/auth/gmail.modify"
   "https://www.googleapis.com/auth/gmail.send"]
 
  :isaac.google/registration
@@ -37,4 +43,40 @@
                 :key     isaac.comm.gmail.watch/keys*
                 :remote  isaac.comm.gmail.watch/remote
                 :delete! isaac.comm.gmail.watch/stop!}}
+
+ :isaac.config/schema
+ {:gmail-routes
+  {:schema
+   {:name        :gmail-routes
+    :type        :map
+    :snapshot-only? true
+    :description "Named Gmail routing rules (map of route name -> route), ordered by :order ascending (ties by name — a map carries no order of its own). One .edn file per route under config/gmail-routes/, or inline. First match wins; a message no route claims is :unrouted. Routes are the whitelist: a :converse route must name :match :from (isaac-sb6d)."
+    :key-spec    {:type :string}
+    :value-spec
+    {:name   :gmail-route
+     :type   :map
+     :schema {:order   {:type        :int
+                        :description "Match precedence, ascending; ties broken by route name."}
+              :match   {:type        :map
+                        :description "Every given key must match (AND); a missing key matches anything. :to/:from are globs (* only, case-insensitive); a *@domain :from is honoured only when Gmail authenticates the sender's domain. :subject is a regex string. :label names a Gmail label the message must carry. :list-id compares the List-Id header exactly."
+                        :schema {:to      {:type :string}
+                                 :from    {:type :string}
+                                 :subject {:type :string}
+                                 :label   {:type :string}
+                                 :list-id {:type :string}}}
+              :action  {:type        :keyword
+                        :description "How a matched message is handled: :converse or :ignore. (:task lands in isaac-3427; an unknown action is a config-validate error naming the route.)"}
+              :crew    {:type        :string
+                        :description "Crew for a :converse route; default gmail/crew."}
+              :comm    {:type        :keyword
+                        :description "Restrict this route to one Gmail comm when several tenants run."}
+              :desc    {:type        :string
+                        :description "Shown to the triage model fallback (isaac-betb)."}
+              :band    {:type        :string
+                        :description "Reserved for a :task route (isaac-3427)."}
+              :ack     {:type        :boolean
+                        :description "Reserved for a :task route (isaac-3427)."}}}}}}
+
+ :isaac.config/check
+ {:gmail-routes {:fn isaac.comm.gmail.routes/check-config}}
 }

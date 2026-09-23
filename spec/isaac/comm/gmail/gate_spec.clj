@@ -3,82 +3,51 @@
     [isaac.comm.gmail.gate :as sut]
     [speclj.core :refer :all]))
 
-(def allow ["ada@tonotop.com"])
-
 (describe "gmail inbound gate"
 
-  (it "accepts an INBOX message from an allowed sender"
-    (should-be-nil (sut/drop-reason {:from "ada@tonotop.com" :label-ids ["INBOX"]} allow)))
+  (describe "not-inbox?"
 
-  (it "drops sent mail as :not-inbox"
-    (should= :not-inbox (sut/drop-reason {:from "ada@tonotop.com" :label-ids ["SENT"]} allow)))
+    (it "is false for INBOX mail"
+      (should-not (sut/not-inbox? {:label-ids ["INBOX"]})))
 
-  (it "drops unknown senders as :sender"
-    (should= :sender (sut/drop-reason {:from "mallory@example.com" :label-ids ["INBOX"]} allow)))
+    (it "is true for sent mail"
+      (should (sut/not-inbox? {:label-ids ["SENT"]})))
 
-  (it "fails closed when allow-from is empty"
-    (should= :sender (sut/drop-reason {:from "ada@tonotop.com" :label-ids ["INBOX"]} [])))
+    (it "is true for drafts"
+      (should (sut/not-inbox? {:label-ids ["DRAFT"]})))
 
-  (it "drops drafts"
-    (should= :not-inbox (sut/drop-reason {:from "ada@tonotop.com" :label-ids ["DRAFT"]} allow)))
+    (it "is true when INBOX is missing entirely"
+      (should (sut/not-inbox? {:label-ids ["STARRED"]}))))
 
-  (it "reads the address out of a display-name From header"
-    (should-be-nil (sut/drop-reason {:from "Ada Lovelace <ada@tonotop.com>" :label-ids ["INBOX"]} allow))
-    (should= "ada@tonotop.com" (sut/address "Ada Lovelace <ADA@Tonotop.com>")))
+  (describe "address"
 
-  (context "*@domain patterns (isaac-dymn)"
+    (it "reads the address out of a display-name From header"
+      (should= "ada@tonotop.com" (sut/address "Ada Lovelace <ADA@Tonotop.com>")))
 
-    (def pattern ["*@tonotop.com"])
+    (it "lower-cases a bare address"
+      (should= "ada@tonotop.com" (sut/address "Ada@Tonotop.com"))))
+
+  (describe "authenticated? (isaac-dymn)"
+
     (def dmarc-pass "mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com; dmarc=pass header.from=tonotop.com")
 
-    (it "admits a domain sender Gmail authenticates"
-      (should-be-nil (sut/drop-reason {:from         "Grace <grace@tonotop.com>"
-                                       :label-ids    ["INBOX"]
-                                       :auth-results dmarc-pass}
-                                      pattern)))
+    (it "vouches for a domain Gmail's dmarc passed"
+      (should (sut/authenticated? {:auth-results dmarc-pass} "tonotop.com")))
 
-    (it "drops a forged From in the pattern's domain as :unauthenticated"
-      (should= :unauthenticated
-               (sut/drop-reason {:from         "grace@tonotop.com"
-                                 :label-ids    ["INBOX"]
-                                 :auth-results "mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com"}
-                                pattern)))
+    (it "does not vouch with no Authentication-Results at all"
+      (should-not (sut/authenticated? {} "tonotop.com")))
 
-    (it "drops a domain sender with no Authentication-Results at all"
-      (should= :unauthenticated
-               (sut/drop-reason {:from "grace@tonotop.com" :label-ids ["INBOX"]} pattern)))
+    (it "does not vouch when dkim and spf both fail"
+      (should-not (sut/authenticated?
+                    {:auth-results "mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com"}
+                    "tonotop.com")))
 
-    (it "accepts spf+dkim when both pass and are aligned to the From domain"
-      (should-be-nil (sut/drop-reason {:from         "grace@tonotop.com"
-                                       :label-ids    ["INBOX"]
-                                       :auth-results "mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com"}
-                                      pattern)))
+    (it "vouches when spf+dkim both pass and are aligned to the domain"
+      (should (sut/authenticated?
+                {:auth-results "mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com"}
+                "tonotop.com")))
 
-    (it "refuses spf+dkim that pass for somebody else's domain"
-      (should= :unauthenticated
-               (sut/drop-reason {:from         "grace@tonotop.com"
-                                 :label-ids    ["INBOX"]
-                                 :auth-results "mx.google.com; dkim=pass header.d=mallory.example; spf=pass smtp.mailfrom=mallory.example"}
-                                pattern)))
-
-    (it "drops an address outside the pattern's domain as :sender, authenticated or not"
-      (should= :sender
-               (sut/drop-reason {:from         "mallory@example.com"
-                                 :label-ids    ["INBOX"]
-                                 :auth-results dmarc-pass}
-                                pattern)))
-
-    (it "does not match a domain that merely ends with the pattern's"
-      (should= :sender
-               (sut/drop-reason {:from "eve@nottonotop.com" :label-ids ["INBOX"] :auth-results dmarc-pass}
-                                pattern)))
-
-    (it "takes an exact entry at its word, as it always has"
-      (should-be-nil (sut/drop-reason {:from "ada@tonotop.com" :label-ids ["INBOX"]} allow)))
-
-    (it "still fails closed with no entries"
-      (should= :sender (sut/drop-reason {:from         "grace@tonotop.com"
-                                         :label-ids    ["INBOX"]
-                                         :auth-results dmarc-pass}
-                                        []))))
-  )
+    (it "does not vouch when spf+dkim pass for somebody else's domain"
+      (should-not (sut/authenticated?
+                    {:auth-results "mx.google.com; dkim=pass header.d=mallory.example; spf=pass smtp.mailfrom=mallory.example"}
+                    "tonotop.com")))))

@@ -20,7 +20,6 @@ Feature: Gmail routes and verdict labels
     And the google auth store has access "at-1" and refresh "rt-1"
     And the gmail history cursor is "1000"
 
-  @wip
   Scenario: a route matching the delivery address starts a turn on that route's crew
     Given config:
       | gmail-routes.ops.order      | 10            |
@@ -48,7 +47,6 @@ Feature: Gmail routes and verdict labels
       | message | user         |              | #".*Deploy is down.*" |
       | message | assistant    | ops          | On it.                |
 
-  @wip
   Scenario: the first matching route wins over a later, broader route
     Given config:
       | gmail-routes.ops.order       | 10            |
@@ -75,7 +73,6 @@ Feature: Gmail routes and verdict labels
     Then message "m-1" carries label "isaac/ops"
     And message "m-1" does not carry label "isaac/team"
 
-  @wip
   Scenario: an ignore route labels the message and marks it read, unless configured not to
     Given config:
       | gmail-routes.newsletters.order      | 30             |
@@ -110,7 +107,6 @@ Feature: Gmail routes and verdict labels
     Then message "m-2" carries label "isaac/newsletters"
     And message "m-2" carries label "UNREAD"
 
-  @wip
   Scenario: a message matching no route is labelled unrouted and logged once, no turn
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -127,7 +123,6 @@ Feature: Gmail routes and verdict labels
       | level | event           | from            | subject        |
       | :info | :gmail/unrouted | ada@tonotop.com | Random thought |
 
-  @wip
   Scenario: bulk precedence overrides a matching converse route
     Given config:
       | gmail-routes.team.order      | 90            |
@@ -147,7 +142,6 @@ Feature: Gmail routes and verdict labels
     Then message "m-1" carries label "isaac/ignored"
     And the session count is 0
 
-  @wip
   Scenario: a message already labelled by an earlier pass is skipped
     Given config:
       | gmail-routes.team.order      | 90            |
@@ -169,7 +163,6 @@ Feature: Gmail routes and verdict labels
       | level  | event                 | id  |
       | :debug | :gmail/already-routed | m-1 |
 
-  @wip
   Scenario: a missing label is created once and reused for the next message
     Given config:
       | gmail-routes.ops.order      | 10            |
@@ -199,7 +192,6 @@ Feature: Gmail routes and verdict labels
     When Gmail pushes a watch notification with history id "1099"
     Then the Gmail API created label "isaac/ops" 1 times
 
-  @wip
   Scenario: a route may live in its own config file
     Given config file "gmail-routes/ops.edn" containing:
       """
@@ -216,7 +208,6 @@ Feature: Gmail routes and verdict labels
     When Gmail pushes a watch notification with history id "1042"
     Then message "m-1" carries label "isaac/ops"
 
-  @wip
   Scenario: two route files order by :order, not filename
     Given config file "gmail-routes/aaa-catchall.edn" containing:
       """
@@ -238,7 +229,6 @@ Feature: Gmail routes and verdict labels
     Then message "m-1" carries label "isaac/zzz-ops"
     And message "m-1" does not carry label "isaac/aaa-catchall"
 
-  @wip
   Scenario: adding a route file while running is picked up on the next message, no restart
     Given config file "gmail-routes/team.edn" containing:
       """
@@ -273,7 +263,6 @@ Feature: Gmail routes and verdict labels
     Then message "m-2" carries label "isaac/newsletters"
     And the session count is 0
 
-  @wip
   Scenario: an unknown route action is reported by config validation, naming the route
     Given config file "gmail-routes/broken.edn" containing:
       """

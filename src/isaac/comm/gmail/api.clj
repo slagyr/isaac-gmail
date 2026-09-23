@@ -138,3 +138,30 @@
       (:body resp)
       (throw (ex-info (str "Gmail labels.list failed: " (:status resp))
                       {:status (:status resp) :body (:body resp)})))))
+
+(defn labels-create!
+  "POST users.labels.create. Gmail's own reply carries the label's real id;
+   callers cache it (isaac-sb6d)."
+  [name]
+  (let [resp (-http! {:method  "POST"
+                      :url     LABELS-URL
+                      :headers (auth-headers)
+                      :body    {:name name :labelListVisibility "labelShow" :messageListVisibility "show"}})]
+    (if (<= 200 (:status resp) 299)
+      (:body resp)
+      (throw (ex-info (str "Gmail labels.create failed: " (:status resp))
+                      {:status (:status resp) :body (:body resp) :name name})))))
+
+(defn messages-modify!
+  "POST users.messages.modify — add/remove label ids on one message."
+  [id {:keys [add remove]}]
+  (let [resp (-http! {:method  "POST"
+                      :url     (str MESSAGES-URL "/" id "/modify")
+                      :headers (auth-headers)
+                      :body    (cond-> {}
+                                 (seq add)    (assoc :addLabelIds (vec add))
+                                 (seq remove) (assoc :removeLabelIds (vec remove)))})]
+    (if (<= 200 (:status resp) 299)
+      (:body resp)
+      (throw (ex-info (str "Gmail messages.modify failed: " (:status resp))
+                      {:status (:status resp) :body (:body resp) :id id})))))
