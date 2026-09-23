@@ -44,9 +44,9 @@ Feature: Gmail routes and verdict labels
     When Gmail pushes a watch notification with history id "1042"
     Then message "m-1" carries label "isaac/ops"
     And session "gmail-t-1" has transcript matching:
-      | type    | message.role | message.crew | message.content     |
-      | message | user         | ops          | #".*Deploy is down.*" |
-      | message | assistant    | ops          | On it.               |
+      | type    | message.role | message.crew | message.content       |
+      | message | user         |              | #".*Deploy is down.*" |
+      | message | assistant    | ops          | On it.                |
 
   @wip
   Scenario: the first matching route wins over a later, broader route
