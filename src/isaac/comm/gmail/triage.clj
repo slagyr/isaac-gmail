@@ -19,6 +19,7 @@
     [clojure.string :as str]
     [isaac.api :as api]
     [isaac.comm.gmail.routes :as routes]
+    [isaac.config.defaults :as defaults]
     [isaac.session.store.spi :as store]
     [isaac.session.transcript :as transcript]))
 
@@ -58,8 +59,12 @@
   [cfg]
   (or (some-> (:default (triage-cfg cfg)) str) "ignore"))
 
-(defn- crew-id [cfg]
-  (or (:crew (triage-cfg cfg)) "main"))
+(defn- crew-id
+  "gmail/triage's own crew, else the operator's default crew. Never nil
+   under a valid config: no-tools-config needs a concrete crew to deny, and
+   there is no crew named main (isaac-zule)."
+  [cfg]
+  (some-> (or (:crew (triage-cfg cfg)) (defaults/crew-id cfg)) name))
 
 (defn- model-alias [cfg]
   (:model (triage-cfg cfg)))

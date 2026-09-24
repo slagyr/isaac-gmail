@@ -18,6 +18,15 @@
     (it "is false when gmail/triage is set but names no model"
       (should-not (sut/configured? {:gmail/triage {:crew "main"}}))))
 
+  (describe "crew-id"
+
+    (it "is gmail/triage's own crew when it names one"
+      (should= "triage" (#'sut/crew-id {:gmail/triage {:crew "triage"} :defaults {:frequencies {:crew :yopp}}})))
+
+    (it "falls back to the operator's default crew, never main (isaac-zule)"
+      (should= "yopp" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew :yopp}}}))
+      (should= "yopp" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew "yopp"}}}))))
+
   (describe "apply?"
 
     (it "is true when gmail/triage.apply is true"
