@@ -579,6 +579,11 @@
         (str/trim (subs decoded (+ idx 4)))
         decoded))))
 
+(defn gmail-api-sent-count [n]
+  (let [sends (filter #(str/includes? (str (:url %)) "/messages/send")
+                      (or (g/get :outbound-http-requests) []))]
+    (g/should= (parse-long (str n)) (count sends))))
+
 (defn sent-mail-decodes [table]
   (let [expected (table-map table)
         req      (or (last (filter #(str/includes? (str (:url %)) "/messages/send")
@@ -655,6 +660,9 @@
 
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)
+
+(defthen #"the Gmail API sent (\d+) messages?"
+  isaac.gmail-steps/gmail-api-sent-count)
 
 (defgiven #"message \"([^\"]+)\" already carries label \"([^\"]+)\""
   isaac.gmail-steps/message-already-carries-label)

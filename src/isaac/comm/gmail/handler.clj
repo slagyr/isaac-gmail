@@ -15,6 +15,7 @@
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.gate :as gate]
+    [isaac.comm.gmail.guidance :as guidance]
     [isaac.comm.gmail.history :as history]
     [isaac.comm.gmail.labels :as labels]
     [isaac.comm.gmail.message :as message]
@@ -113,7 +114,8 @@
                             :input       (user-text msg)
                             :origin      origin
                             :crew        crew-id
-                            :config      cfg}
+                            :config      cfg
+                            :guidance    guidance/TEXT}
                      ch (assoc :comm ch)))))
 
 (defn- label-message! [cfg merged decision]

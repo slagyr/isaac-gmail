@@ -5,6 +5,7 @@
    A comm speaks for one Google organization, so every send runs as that
    organization and uses its token (isaac-1zkz)."
   (:require
+    [cheshire.core :as json]
     [clojure.string :as str]
     [isaac.comm.factory :as factory]
     [isaac.comm.gmail.api :as api]
@@ -17,6 +18,10 @@
     [isaac.nexus :as nexus]))
 
 (defonce ^:private origin-by-session (atom {}))
+
+;; Sessions whose model already answered the origin with gmail__send this
+;; turn (isaac-3t0z). That send is the reply; on-reply* stays silent.
+(defonce ^:private replied-via-tool (atom #{}))
 
 (defn remember-origin! [session-key origin]
   (when (and session-key (= :gmail (:kind origin)))
@@ -59,15 +64,37 @@
   (when-let [origin (:origin cycle)]
     (remember-origin! session-key origin)))
 
+(defn- tool-args [arguments]
+  (let [arguments (if (string? arguments)
+                    (try (json/parse-string arguments) (catch Exception _ {}))
+                    arguments)]
+    (reduce-kv (fn [m k v] (assoc m (name k) v)) {} (or arguments {}))))
+
+(defn reply-to-origin?
+  "True when `tool-call` is a gmail__send replying to the origin message:
+   that send is the turn's reply (isaac-3t0z)."
+  [origin tool-call]
+  (let [reply-to (some-> (get (tool-args (:arguments tool-call)) "reply-to-id") str str/trim)]
+    (boolean (and (= "gmail__send" (:name tool-call))
+                  (seq reply-to)
+                  (= reply-to (:message-id origin))))))
+
+(defn- on-tool-call* [_comm session-key tool-call]
+  (when (reply-to-origin? (get @origin-by-session session-key) tool-call)
+    (swap! replied-via-tool conj session-key)))
+
 (defn- on-reply* [comm session-key text]
   (when-let [origin (get @origin-by-session session-key)]
-    (when (seq (str/trim (str text)))
+    (if (contains? @replied-via-tool session-key)
+      (log/debug :gmail/reply-deduped :session session-key)
+      (when (seq (str/trim (str text)))
       (try
         (as-comm-organization comm #(send-reply! origin text))
         (catch Exception e
-          (log/error :gmail.reply/failed :error (.getMessage e)))))))
+          (log/error :gmail.reply/failed :error (.getMessage e))))))))
 
 (defn- on-turn-end* [_comm session-key _result]
+  (swap! replied-via-tool disj session-key)
   (swap! origin-by-session dissoc session-key))
 
 (deftype GmailComm [host cfg])
@@ -77,6 +104,7 @@
   (merge comm/defaults
          {:send!          send!*
           :on-cycle-start on-cycle-start*
+          :on-tool-call   on-tool-call*
           :on-reply       on-reply*
           :on-turn-end    on-turn-end*}))
 

@@ -164,3 +164,65 @@ Feature: Gmail comm
     And the log has entries matching:
       | level | event                  | reason           |
       | :warn | :gmail/message-dropped | :unauthenticated |
+
+  Scenario: a gmail__send reply to the origin is the reply — the answer text is not mailed again (isaac-3t0z)
+    Given the crew "main" allows tools: "gmail__send"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from       | ada@tonotop.com     |
+      | to         | yopp@tonotop.com    |
+      | subject    | Deploy window       |
+      | message-id | <abc@tonotop.com>   |
+      | body       | Can we ship Friday? |
+    And the following model responses are queued:
+      | model | type | content       | tool_call   | arguments                                       |
+      | echo  |      |               | gmail__send | {"reply-to-id": "m-1", "body": "Friday works."} |
+      | echo  | text | Friday works. |             |                                                 |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the Gmail API sent 1 message
+    And the sent mail decodes to:
+      | Subject | Re: Deploy window |
+      | text    | Friday works.     |
+    And the log has entries matching:
+      | level  | event                | session   |
+      | :debug | :gmail/reply-deduped | gmail-t-1 |
+
+  Scenario: a turn that only answers in text sends one reply (isaac-3t0z)
+    Given the crew "main" allows tools: "gmail__send"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from    | ada@tonotop.com     |
+      | to      | yopp@tonotop.com    |
+      | subject | Deploy window       |
+      | body    | Can we ship Friday? |
+    And the following model responses are queued:
+      | model | type | content       |
+      | echo  | text | Friday works. |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the Gmail API sent 1 message
+
+  Scenario: a gmail__send to another thread is not the reply — both go out (isaac-3t0z)
+    Given the crew "main" allows tools: "gmail__send"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from    | ada@tonotop.com     |
+      | to      | yopp@tonotop.com    |
+      | subject | Deploy window       |
+      | body    | Can we ship Friday? |
+    And the Gmail API returns message "m-9":
+      | from    | grace@tonotop.com |
+      | to      | yopp@tonotop.com  |
+      | subject | Freeze            |
+      | body    | Any freeze?       |
+    And the following model responses are queued:
+      | model | type | content       | tool_call   | arguments                                    |
+      | echo  |      |               | gmail__send | {"reply-to-id": "m-9", "body": "No freeze."} |
+      | echo  | text | Friday works. |             |                                              |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the Gmail API sent 2 messages

@@ -1,5 +1,7 @@
 (ns isaac.comm.gmail.handler-spec
   (:require
+    [isaac.api :as api]
+    [isaac.comm.gmail.guidance :as guidance]
     [isaac.comm.gmail.handler :as sut]
     [speclj.core :refer :all]))
 
@@ -33,3 +35,15 @@
 
   (it "is nil on a single-tenant host"
     (should-be-nil (#'sut/tenant-of {:comms {:gmail {}}}))))
+
+(describe "gmail handler - start-turn! (isaac-3t0z)"
+
+  (it "carries the standing guidance: the answer text is the reply"
+    (let [dispatched (atom nil)]
+      (with-redefs [api/get-session     (fn [_] nil)
+                    api/create-session! (fn [id _] {:name id})
+                    api/dispatch!       (fn [req] (reset! dispatched req))
+                    sut/live-comm       (fn [_] nil)]
+        (#'sut/start-turn! {:id "m-1" :threadId "t-1" :from "ada@tonotop.com" :subject "Hi" :body "Yo"} {} "main")
+        (should= "gmail-t-1" (:session-key @dispatched))
+        (should= guidance/TEXT (:guidance @dispatched))))))
