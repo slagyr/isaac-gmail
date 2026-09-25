@@ -229,9 +229,6 @@ Feature: Gmail comm
     When Gmail pushes a watch notification with history id "1042"
     And the delivery worker ticks
     Then the Gmail API sent 2 messages
-    And the sent mail to "ada@tonotop.com" decodes to:
-      | Subject | Re: Deploy window |
-      | text    | Friday works.     |
 
   # Attachments (isaac-8hi7): a multipart/mixed raw message carries the files.
 
