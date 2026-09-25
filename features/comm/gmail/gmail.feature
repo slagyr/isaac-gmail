@@ -253,3 +253,29 @@ Feature: Gmail comm
       | Subject     | Report            |
       | text        | Attached.         |
       | attachments | report.pdf        |
+
+  # Inbound attachments (isaac-e2zb): an email's attachment parts are downloaded
+  # under the session's working directory before the turn, and the framed
+  # input names them.
+
+  @wip
+  Scenario: an email attachment is saved under the session working directory and the turn is told (isaac-e2zb)
+    Given the crew "main" allows tools: "fs/*"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from    | ada@tonotop.com    |
+      | to      | yopp@tonotop.com   |
+      | subject | The report         |
+      | body    | Attached, as asked |
+    And the Gmail API returns attachment "att-1" of message "m-1" named "report.pdf" with content "%PDF-1.4 stub"
+    And the following model responses are queued:
+      | model | type | content        |
+      | echo  | text | Got the report. |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the file "attachments/m-1/report.pdf" under the session working directory contains "%PDF-1.4 stub"
+    And session "gmail-t-1" has transcript matching:
+      | type    | message.role | message.content                                                     |
+      | message | user         | #"(?s).*\[attachment: report\.pdf \(application/pdf, .*\) at attachments/m-1/report\.pdf\].*" |
+      | message | assistant    | Got the report.                                                     |
