@@ -11,6 +11,7 @@
 (def MESSAGES-URL "https://gmail.googleapis.com/gmail/v1/users/me/messages")
 (def SEND-URL "https://gmail.googleapis.com/gmail/v1/users/me/messages/send")
 (def LABELS-URL "https://gmail.googleapis.com/gmail/v1/users/me/labels")
+(def THREADS-URL "https://gmail.googleapis.com/gmail/v1/users/me/threads")
 
 (defn- parse-body [body]
   (try
@@ -115,6 +116,21 @@
       (:body resp)
       (throw (ex-info (str "Gmail messages.send failed: " (:status resp))
                       {:status (:status resp) :body (:body resp)})))))
+
+(defn threads-get!
+  "GET users.threads.get format=full — a thread's messages, oldest first.
+   Used to find the last message on a :gmail/thread comm__send (isaac-iwio):
+   the record that queues the send carries only the thread id, so the reply
+   headers (From, Subject, Message-ID) are looked up fresh here."
+  [id]
+  (let [resp (-http! {:method  "GET"
+                      :url     (str THREADS-URL "/" id)
+                      :headers (auth-headers)
+                      :query   {:format "full"}})]
+    (if (<= 200 (:status resp) 299)
+      (:body resp)
+      (throw (ex-info (str "Gmail threads.get failed: " (:status resp))
+                      {:status (:status resp) :id id :body (:body resp)})))))
 
 (defn messages-search!
   "GET users.messages.list with Gmail's own query syntax (isaac-jqk2)."

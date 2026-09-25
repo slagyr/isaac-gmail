@@ -1,11 +1,14 @@
 (ns isaac.comm.gmail.guidance-spec
   (:require
-    [clojure.string :as str]
     [isaac.comm.gmail.guidance :as sut]
-    [speclj.core :refer [describe it should]]))
+    [speclj.core :refer [describe it should=]]))
 
-(describe "gmail guidance (isaac-3t0z)"
+(describe "gmail guidance (isaac-iwio)"
 
-  (it "says the answer text is the reply and gmail__send is for other threads"
-    (should (str/includes? sut/TEXT "sent automatically as the email reply"))
-    (should (str/includes? sut/TEXT "gmail__send"))))
+  (it "is exactly the one-send-tool guidance text, verbatim"
+    (should= (str "Your response is the text you end this turn with. It is delivered back over the channel "
+                  "this message came from, so never send it with comm__send. That tool is for additional "
+                  "messages of your own during the turn: several messages in a row, a message to another "
+                  "thread, space or person, or something you were asked to send. Those never replace your "
+                  "response, so still end the turn with it, even if it is short.")
+             sut/TEXT)))

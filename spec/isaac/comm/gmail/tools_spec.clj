@@ -52,39 +52,6 @@
           (should= "Can we ship Friday?" (:body result))
           (should= "t-1" (:threadId result))))))
 
-  (context "gmail__send"
-
-    (it "insists on a body"
-      (should (:isError (sut/send-mail {:to "ada@tonotop.com"}))))
-
-    (it "insists on a recipient or a message to reply to"
-      (should (:isError (sut/send-mail {:body "hello"}))))
-
-    (it "replies on the original's thread, with its Message-ID"
-      (let [sent (atom nil)]
-        (with-redefs [gmail-api/messages-get!  (fn [_] a-message)
-                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-1" :threadId "t-1"})]
-          (should= {:id "s-1" :threadId "t-1"}
-                   (:result (sut/send-mail {:reply-to-id "m-1" :body "Friday works."})))
-          (should= "t-1" (:thread-id @sent))
-          (let [raw (gmail-api/decode-raw (:raw @sent))]
-            (should-contain "In-Reply-To: <abc@mail>" raw)
-            (should-contain "Subject: Re: Deploy window" raw)
-            (should-contain "Friday works." raw)))))
-
-    (it "writes a new message to an address"
-      (let [sent (atom nil)]
-        (with-redefs [gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-2"})]
-          (sut/send-mail {:to "ada@tonotop.com" :subject "Lunch" :body "Tacos?"})
-          (let [raw (gmail-api/decode-raw (:raw @sent))]
-            (should-contain "To: ada@tonotop.com" raw)
-            (should-contain "Subject: Lunch" raw)
-            (should-be-nil (:thread-id @sent))))))
-
-    (it "reports a Gmail failure as a tool error"
-      (with-redefs [gmail-api/messages-send! (fn [_] (throw (ex-info "boom" {})))]
-        (should (:isError (sut/send-mail {:to "ada@tonotop.com" :body "hi"}))))))
-
   (context "gmail__labels"
 
     (it "lists them"
@@ -92,8 +59,6 @@
         (should= [{:id "INBOX" :name "INBOX" :type "system"}]
                  (:labels (:result (sut/labels {})))))))
 
-  (it "describes each tool, and says which one leaves the building"
-    (should-contain "Side-effecting" (:description (sut/send-tool-factory {})))
-    (should= ["q"] (:required (:parameters (sut/search-tool-factory {}))))
-    (should= ["body"] (:required (:parameters (sut/send-tool-factory {})))))
+  (it "describes each tool"
+    (should= ["q"] (:required (:parameters (sut/search-tool-factory {})))))
   )

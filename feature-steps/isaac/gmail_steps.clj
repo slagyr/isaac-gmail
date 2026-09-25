@@ -1,10 +1,15 @@
 (ns isaac.gmail-steps
-  "Gmail comm feature steps: cursor, history/message stubs, watch push, sent-mail decode."
+  "Gmail comm feature steps: cursor, history/message stubs, watch push,
+   sent-mail decode. Pulls in isaac.comm.delivery.worker-steps the same way
+   isaac.session.session-steps is pulled in (isaac-iwio) — required for its
+   side effect, registering the shared \"the delivery worker ticks\" step;
+   nothing here calls it directly."
   (:require
     [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
     [gherclj.core :as g :refer [after-all defgiven defthen defwhen helper!]]
+    [isaac.comm.delivery.worker-steps]
     [isaac.comm.factory :as comm-factory]
     [isaac.comm.gmail :as gmail]
     [isaac.comm.gmail.api :as gmail-api]
@@ -40,6 +45,11 @@
 
 (defonce ^:private live-scheduler* (atom nil))
 
+;; Captured once at namespace load, before any scenario stubs anything -
+;; the pristine production fns to restore in after-scenario (isaac-iwio).
+(defonce ^:private original-gmail-http! gmail-api/-http!)
+(defonce ^:private original-gmail-access-token gmail-api/access-token)
+
 (defn- shutdown-gmail-scheduler! []
   (when-let [s @live-scheduler*]
     (scheduler/shutdown! s)
@@ -49,6 +59,8 @@
 (g/after-scenario
   (fn []
     (alter-var-root #'discovery/*foundation-index-override* (constantly nil))
+    (alter-var-root #'gmail-api/-http! (constantly original-gmail-http!))
+    (alter-var-root #'gmail-api/access-token (constantly original-gmail-access-token))
     (gmail-labels/reset-cache!)
     (g/dissoc! :gmail-history)
     (g/dissoc! :gmail-history-fail)
@@ -195,6 +207,12 @@
             updated     (vec (remove remove-ids (distinct (concat current add))))]
         (g/update! :gmail-messages (fnil assoc {}) id (merge existing {:id id :labelIds updated}))
         {:status 200 :body {:id id :labelIds updated} :url url :method "POST" :headers (:headers req)})
+
+      (re-find #"/threads/[^/?]+" url)
+      (let [tid (last (re-find #"/threads/([^/?]+)" url))
+            msgs (->> (vals (g/get :gmail-messages))
+                     (filter #(= tid (:threadId %))))]
+        {:status 200 :body {:id tid :messages (vec msgs)} :url url :method "GET" :headers (:headers req)})
 
       (re-find #"/messages/[^/?]+" url)
       (let [id  (or (last (re-find #"/messages/([^/?]+)" url))
@@ -395,10 +413,18 @@
       (g/get :gmail-access-token)
       "at-1"))
 
-(defn- with-gmail-stubs [f]
-  (with-redefs [gmail-api/-http!       stub-http!
-                gmail-api/access-token #(stored-access-token tenants/*tenant*)]
-    (f)))
+(defn- with-gmail-stubs
+  "Installs the Gmail HTTP/token stubs for the rest of the scenario, not just
+   the dynamic extent of `f`. `the delivery worker ticks` (isaac-agent,
+   isaac-iwio) runs the real registered gmail comm in a later, separate step
+   call after `f` has already returned — a `with-redefs` here would have
+   unwound by then, so the comm's real send!* would hit the real Gmail API
+   and 401. alter-var-root persists the stub across step calls; the
+   after-scenario hook below restores the originals."
+  [f]
+  (alter-var-root #'gmail-api/-http! (constantly stub-http!))
+  (alter-var-root #'gmail-api/access-token (constantly #(stored-access-token tenants/*tenant*)))
+  (f))
 
 (defn- record-from-table
   "A | path | value | table as a send record."
@@ -604,6 +630,30 @@
           (g/should (cell-matches? v (header-from-raw raw key))))))
     (g/should (seq decoded))))
 
+(defn sent-mail-to-decodes
+  "Recipient-scoped variant of `the sent mail decodes to:` (isaac-iwio): a
+   scenario that sends more than one email in a turn (the origin reply plus
+   a comm__send) picks out the one addressed to `address` by its To header,
+   then reuses the same decode/match logic."
+  [address table]
+  (let [expected (table-map table)
+        sends    (filter #(str/includes? (str (:url %)) "/messages/send")
+                         (or (g/get :outbound-http-requests) []))
+        req      (some (fn [r]
+                         (let [raw (get-in r [:body :raw])]
+                           (when (and (seq raw) (= address (header-from-raw raw "To")))
+                             r)))
+                       sends)
+        raw      (get-in req [:body :raw])
+        decoded  (try (gmail-api/decode-raw raw) (catch Exception _ ""))]
+    (g/should (seq raw))
+    (doseq [[k v] expected]
+      (let [key (str k)]
+        (case key
+          "text" (g/should (cell-matches? v (body-from-raw raw)))
+          (g/should (cell-matches? v (header-from-raw raw key))))))
+    (g/should (seq decoded))))
+
 (defgiven "the gmail history cursor is {id:string}"
   isaac.gmail-steps/cursor-is)
 
@@ -665,6 +715,9 @@
 
 (defthen "the sent mail decodes to:"
   isaac.gmail-steps/sent-mail-decodes)
+
+(defthen #"the sent mail to \"([^\"]+)\" decodes to:"
+  isaac.gmail-steps/sent-mail-to-decodes)
 
 (defthen #"the Gmail API sent (\d+) messages?"
   isaac.gmail-steps/gmail-api-sent-count)

@@ -1,27 +1,94 @@
 (ns isaac.comm.gmail-spec
   (:require
     [isaac.comm.gmail :as sut]
-    [speclj.core :refer [describe it should should-not]]))
+    [isaac.comm.gmail.api :as gmail-api]
+    [isaac.comm.protocol :as comm]
+    [speclj.core :refer :all]))
 
-(def origin {:kind :gmail :thread-id "t-1" :message-id "m-1"})
+(defn- comm-with [slice]
+  (let [c (sut/make {:name :gmail :root "/tmp"})]
+    (reset! (.-cfg c) slice)
+    c))
 
-(describe "gmail comm - reply-to-origin? (isaac-3t0z)"
+(def slice {:gmail/account "yopp@tonotop.com"})
 
-  (it "a gmail__send replying to the origin message is the reply"
-    (should (sut/reply-to-origin? origin {:name "gmail__send" :arguments {"reply-to-id" "m-1"}})))
+(def a-thread-message
+  {:id       "m-1"
+   :threadId "t-1"
+   :payload  {:headers [{:name "From" :value "ada@tonotop.com"}
+                        {:name "Subject" :value "Deploy window"}
+                        {:name "Message-ID" :value "<abc@tonotop.com>"}]
+              :body    {:data ""}}})
 
-  (it "reads keyword and JSON-string arguments too"
-    (should (sut/reply-to-origin? origin {:name "gmail__send" :arguments {:reply-to-id " m-1 "}}))
-    (should (sut/reply-to-origin? origin {:name "gmail__send" :arguments "{\"reply-to-id\": \"m-1\"}"})))
+(describe "gmail comm send! (isaac-iwio)"
 
-  (it "a reply to another message is not the reply"
-    (should-not (sut/reply-to-origin? origin {:name "gmail__send" :arguments {"reply-to-id" "m-9"}})))
+  (context ":gmail/thread — reply on that thread"
 
-  (it "a new message (no reply-to-id) is not the reply"
-    (should-not (sut/reply-to-origin? origin {:name "gmail__send" :arguments {"to" "ada@tonotop.com"}})))
+    (it "fetches the thread's last message and replies on it"
+      (let [sent (atom nil)
+            c    (comm-with slice)]
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/threads-get!   (fn [id] (should= "t-1" id) {:messages [a-thread-message]})
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-1" :threadId "t-1"})]
+          (should= {:ok true}
+                   (comm/send! c {:gmail/thread "t-1" :content "Looking now."}))
+          (should= "t-1" (:thread-id @sent))
+          (let [raw (gmail-api/decode-raw (:raw @sent))]
+            (should-contain "To: ada@tonotop.com" raw)
+            (should-contain "Subject: Re: Deploy window" raw)
+            (should-contain "In-Reply-To: <abc@tonotop.com>" raw)
+            (should-contain "References: <abc@tonotop.com>" raw)
+            (should-contain "Looking now." raw)))))
 
-  (it "another tool is never the reply"
-    (should-not (sut/reply-to-origin? origin {:name "gmail__read" :arguments {"reply-to-id" "m-1"}})))
+    (it "fails transiently when the thread cannot be found"
+      (let [c (comm-with slice)]
+        (with-redefs [gmail-api/access-token (constantly "at-1")
+                      gmail-api/threads-get! (fn [_] {:messages []})]
+          (let [result (comm/send! c {:gmail/thread "t-9" :content "Hi"})]
+            (should-not (:ok result))
+            (should (:transient? result)))))))
 
-  (it "no origin, no reply"
-    (should-not (sut/reply-to-origin? nil {:name "gmail__send" :arguments {"reply-to-id" "m-1"}}))))
+  (context ":gmail/to (+ :gmail/subject), no thread — a new message"
+
+    (it "writes a new message to the address with the given subject"
+      (let [sent (atom nil)
+            c    (comm-with slice)]
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-2"})]
+          (should= {:ok true}
+                   (comm/send! c {:gmail/to "grace@tonotop.com" :gmail/subject "Deploy window"
+                                  :content  "Ada asks: can we ship Friday?"}))
+          (should-be-nil (:thread-id @sent))
+          (let [raw (gmail-api/decode-raw (:raw @sent))]
+            (should-contain "To: grace@tonotop.com" raw)
+            (should-contain "Subject: Deploy window" raw)
+            (should-contain "Ada asks: can we ship Friday?" raw)))))
+
+    (it "is an error without a subject, and nothing is sent"
+      (let [sent? (atom false)
+            c     (comm-with slice)]
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [_] (reset! sent? true) {})]
+          (let [result (comm/send! c {:gmail/to "grace@tonotop.com" :content "Hi"})]
+            (should-not (:ok result))
+            (should-not (:transient? result))
+            (should-not @sent?))))))
+
+  (context "neither — reply on the session's own origin (unchanged default)"
+
+    (it "replies using the record's own from/subject/message-id/thread-id"
+      (let [sent (atom nil)
+            c    (comm-with slice)]
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-3"})]
+          (should= {:ok true}
+                   (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
+                                  :thread-id "t-7" :content "On my way."}))
+          (should= "t-7" (:thread-id @sent))
+          (let [raw (gmail-api/decode-raw (:raw @sent))]
+            (should-contain "To: ada@tonotop.com" raw)
+            (should-contain "Subject: Re: Standup" raw)))))
+
+    (it "does nothing on blank content"
+      (let [c (comm-with slice)]
+        (should= {:ok false :transient? false} (comm/send! c {:content "   "}))))))

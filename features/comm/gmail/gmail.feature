@@ -187,7 +187,6 @@ Feature: Gmail comm
   # comm mails it; a comm__send into the origin thread is an additional
   # message, so both go out.
 
-  @wip
   Scenario: comm__send with gmail.to and gmail.subject sends a new email (isaac-iwio)
     Given the crew "main" allows tools: "comm/send"
     And the Gmail API history since "1000" adds messages:
@@ -210,7 +209,6 @@ Feature: Gmail comm
       | Subject | Deploy window                 |
       | text    | Ada asks: can we ship Friday? |
 
-  @wip
   Scenario: comm__send replying into the origin thread, then the answer — both go out (isaac-iwio)
     Given the crew "main" allows tools: "comm/send"
     And the Gmail API history since "1000" adds messages:

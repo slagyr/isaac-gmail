@@ -1,11 +1,17 @@
 {:id          :isaac.comm.gmail
- :version     "0.2.5"
+ :version     "0.2.6"
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
 
  :isaac.agent/comm
  {:gmail {:namespace    isaac.comm.gmail
+          :send-schema  {:gmail/to      {:type        :string
+                                         :description "Recipient email, for a new message with no :gmail/thread."}
+                         :gmail/subject {:type        :string
+                                         :description "Subject for a new message; required with :gmail/to when there is no :gmail/thread."}
+                         :gmail/thread  {:type        :string
+                                         :description "Gmail thread id to reply on: Subject prefixed Re:, In-Reply-To/References from the thread's last message. Wins over :gmail/to."}}
           :extra-schema {:gmail/google             {:type        :keyword
                                                      :description "Google organization (tenant) this comm speaks for: it sends with that organization's token and its mailbox is watched against that organization's topic. Omit on a host with one organization."}
                          :gmail/account            {:type        :string
@@ -30,10 +36,11 @@
                                                      :description "How often the :gmail/pull scheduler task walks history in gmail/mode :pull. Default 60000 (isaac-u80t)."}}}}
 
  ;; Mailbox tools on Isaac's own token and the crew's allow-list (isaac-jqk2).
+ ;; Sending is comm__send's job (:send-schema above, isaac-iwio) — gmail__send
+ ;; retired.
  :isaac.agent/tools
  {:gmail__search {:factory isaac.comm.gmail.tools/search-tool-factory}
   :gmail__read   {:factory isaac.comm.gmail.tools/read-tool-factory}
-  :gmail__send   {:factory isaac.comm.gmail.tools/send-tool-factory}
   :gmail__labels {:factory isaac.comm.gmail.tools/labels-tool-factory}}
 
  :isaac.google/handler
