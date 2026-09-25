@@ -4,7 +4,7 @@
     [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [gherclj.core :as g :refer [defgiven defthen defwhen helper!]]
+    [gherclj.core :as g :refer [after-all defgiven defthen defwhen helper!]]
     [isaac.comm.factory :as comm-factory]
     [isaac.comm.gmail :as gmail]
     [isaac.comm.gmail.api :as gmail-api]
@@ -32,6 +32,11 @@
     [isaac.step-tables :as match]))
 
 (helper! isaac.gmail-steps)
+
+;; Tool-call scenarios run tool workers via `future` (isaac-agent tool_loop),
+;; which starts the agent send-off pool. Its non-daemon threads keep the JVM
+;; alive ~60s after gherclj.main returns; shut the pool down after the run.
+(after-all shutdown-agents)
 
 (defonce ^:private live-scheduler* (atom nil))
 
