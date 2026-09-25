@@ -592,23 +592,60 @@
     (boolean (re-find (java.util.regex.Pattern/compile pattern java.util.regex.Pattern/DOTALL) (str actual)))
     (= expected actual)))
 
-(defn- header-from-raw [raw name]
-  (when (seq raw)
-    (let [decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw))
-          lines   (str/split-lines decoded)
-          prefix  (str name ":")]
+(defn- header-from-decoded [decoded name]
+  (when (seq decoded)
+    (let [lines  (str/split-lines decoded)
+          prefix (str name ":")]
       (some (fn [line]
               (when (str/starts-with? (str/lower-case line) (str/lower-case prefix))
                 (str/trim (subs line (count prefix)))))
             lines))))
 
-(defn- body-from-raw [raw]
-  (when (seq raw)
-    (let [decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw))
-          idx     (str/index-of decoded "\r\n\r\n")]
+(defn- header-from-raw [raw name]
+  (header-from-decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw)) name))
+
+(defn- body-from-decoded [decoded]
+  (when (seq decoded)
+    (let [idx (str/index-of decoded "\r\n\r\n")]
       (if idx
         (str/trim (subs decoded (+ idx 4)))
         decoded))))
+
+;; Multipart decode (isaac-8hi7): a comm__send attachment turns the sent
+;; mail into multipart/mixed. The generic "sent mail decodes to:" steps
+;; below pick the text/plain part's body for the `text` row, and list
+;; attachment parts' filenames (comma-joined) for an `attachments` row.
+
+(defn- boundary-from-decoded [decoded]
+  (when-let [ct (header-from-decoded decoded "Content-Type")]
+    (second (re-find #"(?i)boundary=\"?([^\";]+)\"?" ct))))
+
+(defn- mime-parts [decoded]
+  (when-let [boundary (boundary-from-decoded decoded)]
+    (let [token (str "--" boundary)
+          idx0  (str/index-of decoded token)]
+      (when idx0
+        (let [body     (subs decoded (+ idx0 (count token)))
+              segments (str/split body (re-pattern (java.util.regex.Pattern/quote token)))]
+          (->> segments
+               (map str/trim)
+               (remove #(or (str/blank? %) (= "--" %)))))))))
+
+(defn- attachment-filename [part]
+  (when-let [cd (header-from-decoded part "Content-Disposition")]
+    (second (re-find #"(?i)filename=\"?([^\";]+)\"?" cd))))
+
+(defn- decoded-text-body [decoded]
+  (if (boundary-from-decoded decoded)
+    (or (some (fn [part]
+                (when-not (attachment-filename part)
+                  (body-from-decoded part)))
+              (mime-parts decoded))
+        "")
+    (body-from-decoded decoded)))
+
+(defn- decoded-attachment-filenames-csv [decoded]
+  (str/join "," (keep attachment-filename (mime-parts decoded))))
 
 (defn gmail-api-sent-count [n]
   (let [sends (filter #(str/includes? (str (:url %)) "/messages/send")
@@ -626,8 +663,9 @@
     (doseq [[k v] expected]
       (let [key (str k)]
         (case key
-          "text" (g/should (cell-matches? v (body-from-raw raw)))
-          (g/should (cell-matches? v (header-from-raw raw key))))))
+          "text"        (g/should (cell-matches? v (decoded-text-body decoded)))
+          "attachments" (g/should (cell-matches? v (decoded-attachment-filenames-csv decoded)))
+          (g/should (cell-matches? v (header-from-decoded decoded key))))))
     (g/should (seq decoded))))
 
 (defn sent-mail-to-decodes
@@ -650,8 +688,9 @@
     (doseq [[k v] expected]
       (let [key (str k)]
         (case key
-          "text" (g/should (cell-matches? v (body-from-raw raw)))
-          (g/should (cell-matches? v (header-from-raw raw key))))))
+          "text"        (g/should (cell-matches? v (decoded-text-body decoded)))
+          "attachments" (g/should (cell-matches? v (decoded-attachment-filenames-csv decoded)))
+          (g/should (cell-matches? v (header-from-decoded decoded key))))))
     (g/should (seq decoded))))
 
 (defgiven "the gmail history cursor is {id:string}"

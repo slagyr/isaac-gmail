@@ -3,6 +3,8 @@
     [isaac.comm.gmail :as sut]
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.protocol :as comm]
+    [isaac.fs :as fs]
+    [isaac.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (defn- comm-with [slice]
@@ -91,4 +93,74 @@
 
     (it "does nothing on blank content"
       (let [c (comm-with slice)]
-        (should= {:ok false :transient? false} (comm/send! c {:content "   "}))))))
+        (should= {:ok false :transient? false} (comm/send! c {:content "   "})))))
+
+  (context ":attachments (isaac-8hi7) — a multipart raw message"
+
+    (it "builds a multipart new message carrying the file"
+      (let [sent (atom nil)
+            c    (comm-with slice)
+            fs*  (fs/mem-fs)]
+        (fs/mkdirs fs* "/cwd")
+        (fs/spit fs* "/cwd/report.pdf" "%PDF-1.4 stub")
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-4"})]
+          (nexus/-with-nested-nexus {:fs fs*}
+            (should= {:ok true}
+                     (comm/send! c {:gmail/to      "grace@tonotop.com"
+                                    :gmail/subject "Report"
+                                    :content       "Attached."
+                                    :attachments   ["/cwd/report.pdf"]}))))
+        (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (should-contain "Content-Type: multipart/mixed" raw)
+          (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
+
+    (it "builds a multipart thread reply carrying the file"
+      (let [sent (atom nil)
+            c    (comm-with slice)
+            fs*  (fs/mem-fs)]
+        (fs/mkdirs fs* "/cwd")
+        (fs/spit fs* "/cwd/report.pdf" "%PDF-1.4 stub")
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/threads-get!   (fn [_] {:messages [a-thread-message]})
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-5"})]
+          (nexus/-with-nested-nexus {:fs fs*}
+            (should= {:ok true}
+                     (comm/send! c {:gmail/thread "t-1" :content "Looking now."
+                                    :attachments  ["/cwd/report.pdf"]}))))
+        (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (should-contain "Content-Type: multipart/mixed" raw)
+          (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
+
+    (it "builds a multipart origin reply carrying the file"
+      (let [sent (atom nil)
+            c    (comm-with slice)
+            fs*  (fs/mem-fs)]
+        (fs/mkdirs fs* "/cwd")
+        (fs/spit fs* "/cwd/report.pdf" "%PDF-1.4 stub")
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-6"})]
+          (nexus/-with-nested-nexus {:fs fs*}
+            (should= {:ok true}
+                     (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
+                                    :thread-id "t-7" :content "On my way." :attachments ["/cwd/report.pdf"]}))))
+        (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (should-contain "Content-Type: multipart/mixed" raw)
+          (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
+
+    (it "refuses a delivery whose attachments total more than 25 MB, before any API call"
+      (let [sent? (atom false)
+            c     (comm-with slice)
+            fs*   (fs/mem-fs)]
+        (fs/mkdirs fs* "/cwd")
+        (fs/spit fs* "/cwd/big.bin" (apply str (repeat (inc (* 25 1024 1024)) "x")))
+        (with-redefs [gmail-api/access-token   (constantly "at-1")
+                      gmail-api/messages-send! (fn [_] (reset! sent? true) {})]
+          (nexus/-with-nested-nexus {:fs fs*}
+            (let [result (comm/send! c {:gmail/to      "grace@tonotop.com"
+                                        :gmail/subject "Big"
+                                        :content       "Here."
+                                        :attachments   ["/cwd/big.bin"]})]
+              (should-not (:ok result))
+              (should-not (:transient? result))
+              (should-not @sent?))))))))

@@ -17,6 +17,7 @@
     [isaac.comm.gmail.tenant :as tenant]
     [isaac.comm.protocol :as comm]
     [isaac.config.root :as root]
+    [isaac.fs :as fs]
     [isaac.google.tenants :as tenants]
     [isaac.logger :as log]
     [isaac.nexus :as nexus]))
@@ -37,15 +38,32 @@
   (binding [tenants/*tenant* (tenant/of-comm (slice comm))]
     (f)))
 
-(defn- send-reply! [origin text]
-  (let [raw (api/encode-raw (rfc2822/reply-raw {:from       (:from origin)
-                                                :subject    (:subject origin)
-                                                :message-id (or (:rfc-id origin) (:message-id origin))
-                                                :body       text}))]
+(def ^:private max-attachments-bytes (* 25 1024 1024))
+
+(defn- attachments-total-bytes [fs* paths]
+  (reduce + 0 (map #(fs/size fs* %) paths)))
+
+(defn- send-reply! [origin text attachments fs*]
+  (let [raw (api/encode-raw
+              (if (seq attachments)
+                (rfc2822/multipart-reply-raw {:from        (:from origin)
+                                              :subject     (:subject origin)
+                                              :message-id  (or (:rfc-id origin) (:message-id origin))
+                                              :body        text
+                                              :attachments attachments
+                                              :fs          fs*})
+                (rfc2822/reply-raw {:from       (:from origin)
+                                    :subject    (:subject origin)
+                                    :message-id (or (:rfc-id origin) (:message-id origin))
+                                    :body       text})))]
     (api/messages-send! {:raw raw :thread-id (or (:thread-id origin) (:threadId origin))})))
 
-(defn- send-new! [to subject text]
-  (let [raw (api/encode-raw (rfc2822/message-raw {:to to :subject subject :body text}))]
+(defn- send-new! [to subject text attachments fs*]
+  (let [raw (api/encode-raw
+              (if (seq attachments)
+                (rfc2822/multipart-message-raw {:to to :subject subject :body text
+                                                :attachments attachments :fs fs*})
+                (rfc2822/message-raw {:to to :subject subject :body text})))]
     (api/messages-send! {:raw raw})))
 
 (defn- last-thread-message
@@ -59,40 +77,48 @@
         raw    (last (:messages thread))]
     (when raw (message/from-api raw))))
 
-(defn- send-on-thread! [thread-id text]
+(defn- send-on-thread! [thread-id text attachments fs*]
   (if-let [last-msg (last-thread-message thread-id)]
     (send-reply! {:from       (:from last-msg)
                   :subject    (:subject last-msg)
                   :message-id (:message-id last-msg)
                   :thread-id  thread-id}
-                 text)
+                 text attachments fs*)
     (throw (ex-info "Gmail thread not found" {:thread-id thread-id}))))
 
 (defn- send!* [comm record]
   (try
-    (let [text    (str/trim (str (:content record)))
-          thread  (:gmail/thread record)
-          to      (:gmail/to record)
-          subject (:gmail/subject record)]
+    (let [text        (str/trim (str (:content record)))
+          thread      (:gmail/thread record)
+          to          (:gmail/to record)
+          subject     (:gmail/subject record)
+          attachments (seq (:attachments record))
+          fs*         (when attachments (fs/instance))]
       (cond
         (str/blank? text)
         {:ok false :transient? false}
 
+        (and attachments (> (attachments-total-bytes fs* attachments) max-attachments-bytes))
+        (do (log/error :gmail.send/attachments-too-large
+                       :bytes (attachments-total-bytes fs* attachments)
+                       :limit max-attachments-bytes)
+            {:ok false :transient? false :error "attachments exceed the 25 MB Gmail limit"})
+
         (some? thread)
-        (do (as-comm-organization comm #(send-on-thread! thread text))
+        (do (as-comm-organization comm #(send-on-thread! thread text attachments fs*))
             {:ok true})
 
         (some? to)
         (if (str/blank? (str subject))
           (do (log/error :gmail.send/missing-subject :to to)
               {:ok false :transient? false :error "gmail/subject is required with gmail/to"})
-          (do (as-comm-organization comm #(send-new! to subject text))
+          (do (as-comm-organization comm #(send-new! to subject text attachments fs*))
               {:ok true}))
 
         :else
         (let [origin (or (get @origin-by-session (:session-key record))
                          (select-keys record [:from :subject :message-id :thread-id :rfc-id :kind]))]
-          (as-comm-organization comm #(send-reply! origin text))
+          (as-comm-organization comm #(send-reply! origin text attachments fs*))
           {:ok true})))
     (catch Exception e
       (log/error :gmail.send/failed :error (.getMessage e))
@@ -106,7 +132,7 @@
   (when-let [origin (get @origin-by-session session-key)]
     (when (seq (str/trim (str text)))
       (try
-        (as-comm-organization comm #(send-reply! origin text))
+        (as-comm-organization comm #(send-reply! origin text nil nil))
         (catch Exception e
           (log/error :gmail.reply/failed :error (.getMessage e)))))))
 

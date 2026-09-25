@@ -230,7 +230,6 @@ Feature: Gmail comm
 
   # Attachments (isaac-8hi7): a multipart/mixed raw message carries the files.
 
-  @wip
   Scenario: comm__send with gmail.to, gmail.subject and an attachment sends one multipart email carrying the file (isaac-8hi7)
     Given the crew "main" allows tools: "comm/send"
     And a file "report.pdf" exists in the session working directory with content "%PDF-1.4 stub"
