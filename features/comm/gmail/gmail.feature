@@ -165,31 +165,8 @@ Feature: Gmail comm
       | level | event                  | reason           |
       | :warn | :gmail/message-dropped | :unauthenticated |
 
-  Scenario: a gmail__send reply to the origin is the reply — the answer text is not mailed again (isaac-3t0z)
-    Given the crew "main" allows tools: "gmail__send"
-    And the Gmail API history since "1000" adds messages:
-      | id  | threadId |
-      | m-1 | t-1      |
-    And the Gmail API returns message "m-1":
-      | from       | ada@tonotop.com     |
-      | to         | yopp@tonotop.com    |
-      | subject    | Deploy window       |
-      | message-id | <abc@tonotop.com>   |
-      | body       | Can we ship Friday? |
-    And the following model responses are queued:
-      | model | type | content       | tool_call   | arguments                                       |
-      | echo  |      |               | gmail__send | {"reply-to-id": "m-1", "body": "Friday works."} |
-      | echo  | text | Friday works. |             |                                                 |
-    When Gmail pushes a watch notification with history id "1042"
-    Then the Gmail API sent 1 message
-    And the sent mail decodes to:
-      | Subject | Re: Deploy window |
-      | text    | Friday works.     |
-    And the log has entries matching:
-      | level  | event                | session   |
-      | :debug | :gmail/reply-deduped | gmail-t-1 |
 
-  Scenario: a turn that only answers in text sends one reply (isaac-3t0z)
+  Scenario: a turn that only answers in text sends one reply (isaac-3t0z, kept by isaac-iwio)
     Given the crew "main" allows tools: "gmail__send"
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
@@ -205,24 +182,80 @@ Feature: Gmail comm
     When Gmail pushes a watch notification with history id "1042"
     Then the Gmail API sent 1 message
 
-  Scenario: a gmail__send to another thread is not the reply — both go out (isaac-3t0z)
-    Given the crew "main" allows tools: "gmail__send"
+  # One send tool (isaac-iwio): gmail declares a send-schema so comm__send
+  # can compose mail; the response is the text the turn ends with and the
+  # comm mails it; a comm__send into the origin thread is an additional
+  # message, so both go out.
+
+  @wip
+  Scenario: comm__send with gmail.to and gmail.subject sends a new email (isaac-iwio)
+    Given the crew "main" allows tools: "comm/send"
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com     |
-      | to      | yopp@tonotop.com    |
-      | subject | Deploy window       |
-      | body    | Can we ship Friday? |
-    And the Gmail API returns message "m-9":
-      | from    | grace@tonotop.com |
-      | to      | yopp@tonotop.com  |
-      | subject | Freeze            |
-      | body    | Any freeze?       |
+      | from    | ada@tonotop.com          |
+      | to      | yopp@tonotop.com         |
+      | subject | Deploy window            |
+      | body    | Can you ask Grace today? |
     And the following model responses are queued:
-      | model | type | content       | tool_call   | arguments                                    |
-      | echo  |      |               | gmail__send | {"reply-to-id": "m-9", "body": "No freeze."} |
-      | echo  | text | Friday works. |             |                                              |
+      | model | type | content     | tool_call  | arguments                                                                                                                 |
+      | echo  |      |             | comm__send | {"comm":"gmail","gmail.to":"grace@tonotop.com","gmail.subject":"Deploy window","content":"Ada asks: can we ship Friday?"} |
+      | echo  | text | Asked Grace. |            |                                                                                                                           |
     When Gmail pushes a watch notification with history id "1042"
+    And the delivery worker ticks
     Then the Gmail API sent 2 messages
+    And the sent mail to "grace@tonotop.com" decodes to:
+      | To      | grace@tonotop.com             |
+      | Subject | Deploy window                 |
+      | text    | Ada asks: can we ship Friday? |
+
+  @wip
+  Scenario: comm__send replying into the origin thread, then the answer — both go out (isaac-iwio)
+    Given the crew "main" allows tools: "comm/send"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from       | ada@tonotop.com     |
+      | to         | yopp@tonotop.com    |
+      | subject    | Deploy window       |
+      | message-id | <abc@tonotop.com>   |
+      | body       | Can we ship Friday? |
+    And the following model responses are queued:
+      | model | type | content       | tool_call  | arguments                                                     |
+      | echo  |      |               | comm__send | {"comm":"gmail","gmail.thread":"t-1","content":"Looking now."} |
+      | echo  | text | Friday works. |            |                                                               |
+    When Gmail pushes a watch notification with history id "1042"
+    And the delivery worker ticks
+    Then the Gmail API sent 2 messages
+    And the sent mail to "ada@tonotop.com" decodes to:
+      | Subject | Re: Deploy window |
+      | text    | Friday works.     |
+
+  # Attachments (isaac-8hi7): a multipart/mixed raw message carries the files.
+
+  @wip
+  Scenario: comm__send with gmail.to, gmail.subject and an attachment sends one multipart email carrying the file (isaac-8hi7)
+    Given the crew "main" allows tools: "comm/send"
+    And a file "report.pdf" exists in the session working directory with content "%PDF-1.4 stub"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from    | ada@tonotop.com            |
+      | to      | yopp@tonotop.com           |
+      | subject | Report                     |
+      | body    | Send Grace the report.     |
+    And the following model responses are queued:
+      | model | type | content | tool_call  | arguments                                                                                                              |
+      | echo  |      |         | comm__send | {"comm":"gmail","gmail.to":"grace@tonotop.com","gmail.subject":"Report","content":"Attached.","attachments":["report.pdf"]} |
+      | echo  | text | Sent.   |            |                                                                                                                        |
+    When Gmail pushes a watch notification with history id "1042"
+    And the delivery worker ticks
+    Then the Gmail API sent 2 messages
+    And the sent mail to "grace@tonotop.com" decodes to:
+      | To          | grace@tonotop.com |
+      | Subject     | Report            |
+      | text        | Attached.         |
+      | attachments | report.pdf        |
