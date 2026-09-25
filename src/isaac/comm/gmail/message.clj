@@ -35,6 +35,17 @@
                                    (get-in part ["body" "data"]))))))
             (or (:parts payload) (get payload "parts") []))))
 
+(defn- attachment-parts [payload]
+  (mapcat (fn walk [part]
+            (let [children (or (:parts part) (get part "parts") [])
+                  filename (or (:filename part) (get part "filename"))
+                  attachment-id (or (get-in part [:body :attachmentId]) (get-in part ["body" "attachmentId"]))]
+              (concat (when (and (seq filename) (seq attachment-id))
+                        [{:filename filename :mime-type (or (:mimeType part) (get part "mimeType"))
+                          :attachment-id attachment-id}])
+                      (mapcat walk children))))
+          (or (:parts payload) (get payload "parts") [])))
+
 (defn- compact [m]
   (into {} (remove (fn [[_ v]] (or (nil? v) (= [] v))) m)))
 
@@ -61,4 +72,5 @@
        :message-id (or (:message-id raw) (header headers "Message-ID") (header headers "Message-Id"))
        :body       (or (when (string? (:body raw)) (:body raw))
                        (first-text-part payload)
-                       (:snippet raw))})))
+                       (:snippet raw))
+       :attachments (attachment-parts payload)})))

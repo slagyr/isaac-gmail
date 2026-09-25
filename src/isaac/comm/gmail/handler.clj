@@ -16,6 +16,7 @@
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.gate :as gate]
     [isaac.comm.gmail.guidance :as guidance]
+    [isaac.comm.gmail.inbound-attachment :as inbound-attachment]
     [isaac.comm.gmail.history :as history]
     [isaac.comm.gmail.labels :as labels]
     [isaac.comm.gmail.message :as message]
@@ -107,11 +108,14 @@
 
 (defn- start-turn! [msg cfg crew-id]
   (let [key    (ensure-session! msg crew-id)
+        cwd    (:cwd (api/get-session key))
+        input  (let [lines (when (seq (:attachments msg)) (inbound-attachment/save-all! cwd msg))]
+                 (if (seq lines) (str (user-text msg) "\n" (str/join "\n" lines)) (user-text msg)))
         origin (origin msg)
         ch     (live-comm cfg)]
     (gmail/remember-origin! key origin)
     (api/dispatch! (cond-> {:session-key key
-                            :input       (user-text msg)
+                            :input       input
                             :origin      origin
                             :crew        crew-id
                             :config      cfg

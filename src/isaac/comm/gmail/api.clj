@@ -91,6 +91,17 @@
       (throw (ex-info (str "Gmail messages.get failed: " (:status resp))
                       {:status (:status resp) :id id :body (:body resp)})))))
 
+(defn attachment-get!
+  "GET one MIME attachment's base64url data and decode it as UTF-8 text."
+  [message-id attachment-id]
+  (let [resp (-http! {:method "GET"
+                      :url (str MESSAGES-URL "/" message-id "/attachments/" attachment-id)
+                      :headers (auth-headers)})]
+    (if (<= 200 (:status resp) 299)
+      (decode-raw (get-in resp [:body :data]))
+      (throw (ex-info (str "Gmail attachment get failed: " (:status resp))
+                      {:status (:status resp) :message-id message-id :attachment-id attachment-id})))))
+
 (defn messages-list!
   "GET users.messages.list on INBOX, optionally q=after:<unix>."
   [{:keys [after]}]

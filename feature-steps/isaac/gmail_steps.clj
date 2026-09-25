@@ -214,6 +214,11 @@
                      (filter #(= tid (:threadId %))))]
         {:status 200 :body {:id tid :messages (vec msgs)} :url url :method "GET" :headers (:headers req)})
 
+      (re-find #"/messages/[^/?]+/attachments/[^/?]+" url)
+      (let [[_ id attachment-id] (re-find #"/messages/([^/?]+)/attachments/([^/?]+)" url)
+            data (get-in (g/get :gmail-messages) [id :attachment-data attachment-id])]
+        {:status 200 :body {:data data} :url url :method "GET" :headers (:headers req)})
+
       (re-find #"/messages/[^/?]+" url)
       (let [id  (or (last (re-find #"/messages/([^/?]+)" url))
                     (get-in req [:query :id]))
@@ -312,6 +317,21 @@
                   :threadId   (or (get m "threadId") (get m :threadId) (:threadId existing))
                   :historyId  (or (get m "historyId") (:historyId existing))}]
     (g/update! :gmail-messages (fnil assoc {}) id (merge existing msg))))
+
+(defn gmail-api-returns-attachment [attachment-id message-id filename content]
+  (let [encoded (.encodeToString (.withoutPadding (java.util.Base64/getUrlEncoder)) (.getBytes content "UTF-8"))]
+    (g/update! :gmail-messages update message-id
+               (fn [message]
+                 (-> message
+                     (update :payload #(assoc (or %) :parts [{:filename filename :mimeType "application/pdf"
+                                                              :body {:attachmentId attachment-id}}]))
+                     (assoc-in [:attachment-data attachment-id] encoded))))))
+
+(defn attachment-file-contains [path content]
+  (let [fs*     (feature-fs)
+        session (first (session-store/list-sessions (session-store/registered-store)))
+        target  (str (:cwd session) "/" path)]
+    (g/should= content (fs/slurp fs* target))))
 
 (defn message-already-carries-label [id label]
   (g/update! :gmail-messages
@@ -711,8 +731,14 @@
 (defgiven #"the Gmail API returns message \"([^\"]+)\":"
   isaac.gmail-steps/returns-message)
 
+(defgiven #"the Gmail API returns attachment \"([^\"]+)\" of message \"([^\"]+)\" named \"([^\"]+)\" with content \"([^\"]*)\""
+  isaac.gmail-steps/gmail-api-returns-attachment)
+
 (defgiven "the Gmail API inbox lists messages:"
   isaac.gmail-steps/inbox-lists)
+
+(defthen #"the file \"([^\"]+)\" under the session working directory contains \"([^\"]*)\""
+  isaac.gmail-steps/attachment-file-contains)
 
 (defwhen #"Gmail pushes a watch notification with history id \"([^\"]+)\""
   isaac.gmail-steps/push-watch)

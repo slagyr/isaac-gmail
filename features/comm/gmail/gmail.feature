@@ -258,7 +258,6 @@ Feature: Gmail comm
   # under the session's working directory before the turn, and the framed
   # input names them.
 
-  @wip
   Scenario: an email attachment is saved under the session working directory and the turn is told (isaac-e2zb)
     Given the crew "main" allows tools: "fs/*"
     And the Gmail API history since "1000" adds messages:
