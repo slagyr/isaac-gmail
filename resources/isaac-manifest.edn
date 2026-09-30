@@ -3,6 +3,7 @@
  :builtin?    true
  :factory     isaac.comm.gmail.module/create-module
  :description "Gmail comm for Isaac — watch on INBOX, history walk, thread-as-session routing; replies on thread. Built on isaac-google."
+ :handbook    "isaac/comm/gmail/handbook.md"
 
  :isaac.agent/comm
  {:gmail {:namespace    isaac.comm.gmail
