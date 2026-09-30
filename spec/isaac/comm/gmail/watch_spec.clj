@@ -2,11 +2,11 @@
   (:require
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.watch :as sut]
-    [isaac.config.loader :as loader]
-    [isaac.fs :as fs]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.fs :as fs]
     [isaac.google.registration :as registration]
     [isaac.google.tenants :as tenants]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 ;; One organization is written the same way as several — google.<id>.* — and a

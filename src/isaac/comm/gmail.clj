@@ -10,17 +10,17 @@
    organization and uses its token (isaac-1zkz)."
   (:require
     [clojure.string :as str]
-    [isaac.comm.factory :as factory]
+    [isaac.agent.comm.factory :as factory]
     [isaac.comm.gmail.api :as api]
     [isaac.comm.gmail.message :as message]
     [isaac.comm.gmail.rfc2822 :as rfc2822]
     [isaac.comm.gmail.tenant :as tenant]
-    [isaac.comm.protocol :as comm]
-    [isaac.config.root :as root]
-    [isaac.fs :as fs]
+    [isaac.agent.comm.protocol :as comm]
+    [isaac.foundation.config.root :as root]
+    [isaac.foundation.fs :as fs]
     [isaac.google.tenants :as tenants]
-    [isaac.logger :as log]
-    [isaac.nexus :as nexus]))
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]))
 
 (defonce ^:private origin-by-session (atom {}))
 

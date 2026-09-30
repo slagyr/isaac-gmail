@@ -17,11 +17,11 @@
    matched; the handler only calls `decide!` on an :unrouted verdict."
   (:require
     [clojure.string :as str]
-    [isaac.api :as api]
+    [isaac.agent.api :as api]
     [isaac.comm.gmail.routes :as routes]
-    [isaac.config.defaults :as defaults]
-    [isaac.session.store.spi :as store]
-    [isaac.session.transcript :as transcript]))
+    [isaac.agent.config.defaults :as defaults]
+    [isaac.agent.session.store.spi :as store]
+    [isaac.agent.session.transcript :as transcript]))
 
 (def session-key
   "The one dedicated, reset-context session every triage turn runs in.

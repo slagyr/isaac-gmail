@@ -2,7 +2,7 @@
   (:require
     [clojure.string :as str]
     [isaac.comm.gmail.rfc2822 :as sut]
-    [isaac.fs :as fs]
+    [isaac.foundation.fs :as fs]
     [speclj.core :refer :all])
   (:import
     (java.util Base64)))

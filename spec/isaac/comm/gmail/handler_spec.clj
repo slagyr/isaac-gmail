@@ -1,6 +1,6 @@
 (ns isaac.comm.gmail.handler-spec
   (:require
-    [isaac.api :as api]
+    [isaac.agent.api :as api]
     [isaac.comm.gmail.guidance :as guidance]
     [isaac.comm.gmail.handler :as sut]
     [speclj.core :refer :all]))

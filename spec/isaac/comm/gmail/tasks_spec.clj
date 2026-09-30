@@ -3,7 +3,7 @@
     [isaac.comm.gmail.api :as api]
     [isaac.comm.gmail.labels :as labels]
     [isaac.comm.gmail.tasks :as sut]
-    [isaac.logger :as log]
+    [isaac.foundation.logger :as log]
     [speclj.core :refer :all]))
 
 (describe "gmail tasks (isaac-3427)"

@@ -2,8 +2,8 @@
   "Durable Gmail history cursor at <root>/google/gmail-cursor.edn."
   (:require
     [clojure.edn :as edn]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]))
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]))
 
 (defn- runtime-fs []
   (or (fs/instance) (nexus/get :fs) (fs/real-fs)))

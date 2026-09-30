@@ -1,7 +1,7 @@
 (ns isaac.comm.gmail.module-spec
   (:require
     [clojure.edn :as edn]
-    [isaac.module.protocol]
+    [isaac.foundation.module.protocol]
     [isaac.comm.gmail.module :as sut]
     [speclj.core :refer [describe it should should=]]))
 
@@ -11,7 +11,7 @@
 (describe "isaac.comm.gmail.module"
 
   (it "returns a module"
-    (should (satisfies? isaac.module.protocol/Module (sut/create-module))))
+    (should (satisfies? isaac.foundation.module.protocol/Module (sut/create-module))))
 
   (it "declares its module id"
     (should= :isaac.comm.gmail (:id manifest))))

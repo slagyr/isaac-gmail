@@ -19,12 +19,12 @@
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.handler :as handler]
     [isaac.comm.gmail.history :as history]
-    [isaac.config.loader :as loader]
-    [isaac.config.root :as root]
-    [isaac.fs :as fs]
-    [isaac.logger :as log]
-    [isaac.nexus :as nexus]
-    [isaac.scheduler.runtime :as scheduler]))
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.config.root :as root]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.scheduler.runtime :as scheduler]))
 
 (def task-id :gmail/pull)
 (def default-interval-ms 60000)

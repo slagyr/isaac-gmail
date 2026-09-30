@@ -10,11 +10,11 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [isaac.config.schema-compose :as schema-compose]
-    [isaac.config.schema.resolve :as schema-resolve]
-    [isaac.fs :as fs]
-    [isaac.module.discovery :as discovery]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.config.schema-compose :as schema-compose]
+    [isaac.foundation.config.schema.resolve :as schema-resolve]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.module.discovery :as discovery]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (def ^:private chapter-resource "isaac/comm/gmail/handbook.md")

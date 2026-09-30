@@ -8,7 +8,7 @@
    Which organization a comm speaks for is isaac.google.tenants' answer; this
    namespace is only the Gmail side of it."
   (:require
-    [isaac.config.loader :as loader]
+    [isaac.foundation.config.loader :as loader]
     [isaac.google.tenants :as tenants]))
 
 (def KIND :gmail)

@@ -1,8 +1,8 @@
 (ns isaac.comm.gmail.cursor-spec
   (:require
     [isaac.comm.gmail.cursor :as sut]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (def root "/test/gmail")

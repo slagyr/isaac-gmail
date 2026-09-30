@@ -2,9 +2,9 @@
   (:require
     [isaac.comm.gmail :as sut]
     [isaac.comm.gmail.api :as gmail-api]
-    [isaac.comm.protocol :as comm]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]
+    [isaac.agent.comm.protocol :as comm]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (defn- comm-with [slice]

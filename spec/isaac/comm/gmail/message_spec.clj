@@ -3,9 +3,9 @@
     [isaac.comm.gmail.api :as api]
     [isaac.comm.gmail.inbound-attachment :as inbound-attachment]
     [isaac.comm.gmail.message :as sut]
-    [isaac.fs :as fs]
-    [isaac.logger :as log]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (describe "gmail message/from-api (isaac-sb6d)"

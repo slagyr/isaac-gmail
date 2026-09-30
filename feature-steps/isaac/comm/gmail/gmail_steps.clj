@@ -1,7 +1,7 @@
-(ns isaac.gmail-steps
+(ns isaac.comm.gmail.gmail-steps
   "Gmail comm feature steps: cursor, history/message stubs, watch push,
-   sent-mail decode. Pulls in isaac.comm.delivery.worker-steps the same way
-   isaac.session.session-steps is pulled in (isaac-iwio) — required for its
+   sent-mail decode. Pulls in isaac.agent.comm.delivery.worker-steps the same way
+   isaac.agent.session.session-steps is pulled in (isaac-iwio) — required for its
    side effect, registering the shared \"the delivery worker ticks\" step;
    nothing here calls it directly."
   (:require
@@ -9,8 +9,8 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [gherclj.core :as g :refer [after-all defgiven defthen defwhen helper!]]
-    [isaac.comm.delivery.worker-steps]
-    [isaac.comm.factory :as comm-factory]
+    [isaac.agent.comm.delivery.worker-steps]
+    [isaac.agent.comm.factory :as comm-factory]
     [isaac.comm.gmail :as gmail]
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
@@ -18,25 +18,25 @@
     [isaac.comm.gmail.handler :as handler]
     [isaac.comm.gmail.labels :as gmail-labels]
     [isaac.comm.gmail.pull :as gmail-pull]
-    [isaac.comm.protocol :as comm]
-    [isaac.comm.registry :as comm-registry]
-    [isaac.config.api :as config]
-    [isaac.config.loader :as loader]
-    [isaac.fs :as fs]
+    [isaac.agent.comm.protocol :as comm]
+    [isaac.agent.comm.registry :as comm-registry]
+    [isaac.foundation.config.api :as config]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.fs :as fs]
     [isaac.google.events]
     [isaac.google.registration :as google-registration]
     [isaac.google.tenants :as tenants]
-    [isaac.llm.api.grover :as grover]
-    [isaac.llm.auth.store :as auth-store]
-    [isaac.module.discovery :as discovery]
-    [isaac.nexus :as nexus]
-    [isaac.scheduler.runtime :as scheduler]
-    [isaac.session.session-steps :as session-steps]
-    [isaac.session.store.memory :as memory-store]
-    [isaac.session.store.spi :as session-store]
-    [isaac.step-tables :as match]))
+    [isaac.agent.llm.api.grover :as grover]
+    [isaac.agent.llm.auth.store :as auth-store]
+    [isaac.foundation.module.discovery :as discovery]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.scheduler.runtime :as scheduler]
+    [isaac.agent.session.session-steps :as session-steps]
+    [isaac.agent.session.store.memory :as memory-store]
+    [isaac.agent.session.store.spi :as session-store]
+    [isaac.foundation.step-tables :as match]))
 
-(helper! isaac.gmail-steps)
+(helper! isaac.comm.gmail.gmail-steps)
 
 ;; Tool-call scenarios run tool workers via `future` (isaac-agent tool_loop),
 ;; which starts the agent send-off pool. Its non-daemon threads keep the JVM
@@ -714,100 +714,100 @@
     (g/should (seq decoded))))
 
 (defgiven "the gmail history cursor is {id:string}"
-  isaac.gmail-steps/cursor-is)
+  isaac.comm.gmail.gmail-steps/cursor-is)
 
 (defgiven #"the Gmail API history since \"([^\"]+)\" adds messages:"
-  isaac.gmail-steps/history-adds-messages)
+  isaac.comm.gmail.gmail-steps/history-adds-messages)
 
 (defgiven #"the Gmail API history since \"([^\"]+)\" contains:"
-  isaac.gmail-steps/history-contains)
+  isaac.comm.gmail.gmail-steps/history-contains)
 
 (defgiven #"the Gmail API history since \"([^\"]+)\" is gone"
-  isaac.gmail-steps/history-gone)
+  isaac.comm.gmail.gmail-steps/history-gone)
 
 (defgiven #"the Gmail API history since \"([^\"]+)\" fails with 500"
-  isaac.gmail-steps/history-fails-with-500)
+  isaac.comm.gmail.gmail-steps/history-fails-with-500)
 
 (defgiven #"the Gmail API returns message \"([^\"]+)\":"
-  isaac.gmail-steps/returns-message)
+  isaac.comm.gmail.gmail-steps/returns-message)
 
 (defgiven #"the Gmail API returns attachment \"([^\"]+)\" of message \"([^\"]+)\" named \"([^\"]+)\" with content \"([^\"]*)\""
-  isaac.gmail-steps/gmail-api-returns-attachment)
+  isaac.comm.gmail.gmail-steps/gmail-api-returns-attachment)
 
 (defgiven "the Gmail API inbox lists messages:"
-  isaac.gmail-steps/inbox-lists)
+  isaac.comm.gmail.gmail-steps/inbox-lists)
 
 (defthen #"the file \"([^\"]+)\" under the session working directory contains \"([^\"]*)\""
-  isaac.gmail-steps/attachment-file-contains)
+  isaac.comm.gmail.gmail-steps/attachment-file-contains)
 
 (defwhen #"Gmail pushes a watch notification with history id \"([^\"]+)\""
-  isaac.gmail-steps/push-watch)
+  isaac.comm.gmail.gmail-steps/push-watch)
 
 (defgiven #"the Gmail API grants a watch with history id \"([^\"]+)\" expiring at \"([^\"]+)\""
-  isaac.gmail-steps/gmail-grants-watch)
+  isaac.comm.gmail.gmail-steps/gmail-grants-watch)
 
 (defgiven #"the Gmail API refuses the watch with (\d+) \"([^\"]+)\""
-  isaac.gmail-steps/gmail-refuses-watch)
+  isaac.comm.gmail.gmail-steps/gmail-refuses-watch)
 
 (defgiven #"the registration timer remembers a watch for \"([^\"]+)\" expiring at \"([^\"]+)\""
-  isaac.gmail-steps/timer-remembers-watch)
+  isaac.comm.gmail.gmail-steps/timer-remembers-watch)
 
 (defgiven #"gmail comm \"([^\"]+)\" is registered"
-  isaac.gmail-steps/gmail-comm-registered)
+  isaac.comm.gmail.gmail-steps/gmail-comm-registered)
 
 (defgiven #"the google auth store for organization \"([^\"]+)\" has access \"([^\"]+)\" and refresh \"([^\"]+)\""
-  isaac.gmail-steps/google-auth-store-for-organization)
+  isaac.comm.gmail.gmail-steps/google-auth-store-for-organization)
 
 (defwhen "gmail comm send! is invoked with:"
-  isaac.gmail-steps/gmail-comm-send!)
+  isaac.comm.gmail.gmail-steps/gmail-comm-send!)
 
 (defwhen "the Gmail watch timer ticks"
-  isaac.gmail-steps/gmail-watch-timer-ticks
+  isaac.comm.gmail.gmail-steps/gmail-watch-timer-ticks
   "One reconcile pass of isaac-google's registration timer with the Gmail API stubbed.")
 
 (defwhen "the Gmail pull timer ticks"
-  isaac.gmail-steps/gmail-pull-timer-ticks
+  isaac.comm.gmail.gmail-steps/gmail-pull-timer-ticks
   "One isaac.comm.gmail.pull/tick! with the Gmail API stubbed — the pull-mode
    counterpart of 'the Gmail watch timer ticks'.")
 
 (defthen "the gmail scheduled tasks include:"
-  isaac.gmail-steps/gmail-scheduled-tasks-include
+  isaac.comm.gmail.gmail-steps/gmail-scheduled-tasks-include
   "Boots isaac.comm.gmail.pull/start! against live config and a scenario
    scheduler, then matches its :id/:interval-ms against the table.")
 
 (defthen "the gmail scheduled tasks are empty"
-  isaac.gmail-steps/gmail-scheduled-tasks-are-empty)
+  isaac.comm.gmail.gmail-steps/gmail-scheduled-tasks-are-empty)
 
 (defthen "the sent mail decodes to:"
-  isaac.gmail-steps/sent-mail-decodes)
+  isaac.comm.gmail.gmail-steps/sent-mail-decodes)
 
 (defthen #"the sent mail to \"([^\"]+)\" decodes to:"
-  isaac.gmail-steps/sent-mail-to-decodes)
+  isaac.comm.gmail.gmail-steps/sent-mail-to-decodes)
 
 (defthen #"the Gmail API sent (\d+) messages?"
-  isaac.gmail-steps/gmail-api-sent-count)
+  isaac.comm.gmail.gmail-steps/gmail-api-sent-count)
 
 (defgiven #"message \"([^\"]+)\" already carries label \"([^\"]+)\""
-  isaac.gmail-steps/message-already-carries-label)
+  isaac.comm.gmail.gmail-steps/message-already-carries-label)
 
 (defthen #"message \"([^\"]+)\" carries label \"([^\"]+)\""
-  isaac.gmail-steps/message-carries-label)
+  isaac.comm.gmail.gmail-steps/message-carries-label)
 
 (defthen #"message \"([^\"]+)\" does not carry label \"([^\"]+)\""
-  isaac.gmail-steps/message-does-not-carry-label)
+  isaac.comm.gmail.gmail-steps/message-does-not-carry-label)
 
 (defthen #"the Gmail API created label \"([^\"]+)\" (\d+) times"
-  isaac.gmail-steps/label-created-times)
+  isaac.comm.gmail.gmail-steps/label-created-times)
 
 (defthen #"isaac config validate reports an unknown action for route \"([^\"]+)\""
-  isaac.gmail-steps/config-validate-reports-unknown-action-for-route)
+  isaac.comm.gmail.gmail-steps/config-validate-reports-unknown-action-for-route)
 
 (defgiven "the hail module is installed"
-  isaac.gmail-steps/hail-module-installed)
+  isaac.comm.gmail.gmail-steps/hail-module-installed)
 
 (defthen #"one hail was sent to band \"([^\"]+)\" with:"
-  isaac.gmail-steps/one-hail-sent-to-band)
+  isaac.comm.gmail.gmail-steps/one-hail-sent-to-band)
 
 (defthen "no hail was sent"
-  isaac.gmail-steps/no-hail-was-sent)
+  isaac.comm.gmail.gmail-steps/no-hail-was-sent)
 

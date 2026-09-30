@@ -67,7 +67,7 @@
     :type        :map
     :snapshot-only? true
     :description "Named Gmail routing rules (map of route name -> route), ordered by :order ascending (ties by name — a map carries no order of its own). One .edn file per route under config/gmail-routes/, or inline. First match wins; a message no route claims is :unrouted. Routes are the whitelist: a :converse or :task route must name :match :from (isaac-sb6d, isaac-3427)."
-    :key-spec    {:type :string}
+    :key-spec    {:type :id}
     :value-spec
     {:name   :gmail-route
      :type   :map

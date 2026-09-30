@@ -1,8 +1,8 @@
 (ns isaac.comm.gmail.triage-spec
   (:require
-    [isaac.api :as api]
+    [isaac.agent.api :as api]
     [isaac.comm.gmail.triage :as sut]
-    [isaac.session.store.spi :as store]
+    [isaac.agent.session.store.spi :as store]
     [speclj.core :refer :all]))
 
 (describe "gmail triage fallback (isaac-betb)"

@@ -1,7 +1,7 @@
 (ns isaac.comm.gmail.module
   (:require
     [isaac.comm.gmail.pull :as pull]
-    [isaac.module.protocol :as module]))
+    [isaac.foundation.module.protocol :as module]))
 
 (defn- on-load
   "Boot: gmail/mode :pull schedules the history-walk tick on the shared

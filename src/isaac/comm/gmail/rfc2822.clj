@@ -2,7 +2,7 @@
   "Build RFC 2822 messages for Gmail messages.send."
   (:require
     [clojure.string :as str]
-    [isaac.fs :as fs])
+    [isaac.foundation.fs :as fs])
   (:import
     (java.util Base64)))
 
@@ -88,7 +88,7 @@
 
 (defn multipart-message-raw
   "Multipart/mixed RFC 2822 message that is not a reply, carrying one part
-   per file in :attachments (read via isaac.fs from :fs) alongside the
+   per file in :attachments (read via isaac.foundation.fs from :fs) alongside the
    text body. Same header shape as message-raw otherwise."
   [{:keys [to subject body attachments fs]}]
   (let [boundary (new-boundary)]
@@ -101,7 +101,7 @@
 
 (defn multipart-reply-raw
   "Multipart/mixed RFC 2822 reply carrying the same threading headers as
-   reply-raw, plus one part per file in :attachments (read via isaac.fs
+   reply-raw, plus one part per file in :attachments (read via isaac.foundation.fs
    from :fs) alongside the text body."
   [{:keys [from subject message-id body attachments fs]}]
   (let [boundary (new-boundary)]

@@ -14,7 +14,7 @@
     [isaac.comm.gmail.api :as api]
     [isaac.comm.gmail.labels :as labels]
     [isaac.comm.gmail.rfc2822 :as rfc2822]
-    [isaac.logger :as log]))
+    [isaac.foundation.logger :as log]))
 
 (def default-body-cap
   "gmail/task-body-cap default, in characters."

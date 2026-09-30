@@ -9,8 +9,8 @@
    message converses, is ignored, or is unrouted (isaac-sb6d)."
   (:require
     [clojure.string :as str]
-    [isaac.api :as api]
-    [isaac.comm.factory :as comm-factory]
+    [isaac.agent.api :as api]
+    [isaac.agent.comm.factory :as comm-factory]
     [isaac.comm.gmail :as gmail]
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
@@ -23,13 +23,13 @@
     [isaac.comm.gmail.routes :as routes]
     [isaac.comm.gmail.tasks :as tasks]
     [isaac.comm.gmail.triage :as triage]
-    [isaac.comm.registry :as comm-registry]
-    [isaac.config.defaults :as defaults]
-    [isaac.config.loader :as loader]
-    [isaac.config.root :as root]
-    [isaac.fs :as fs]
-    [isaac.logger :as log]
-    [isaac.nexus :as nexus]))
+    [isaac.agent.comm.registry :as comm-registry]
+    [isaac.agent.config.defaults :as defaults]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.config.root :as root]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]))
 
 (defn- feature-fs []
   (or (fs/instance) (nexus/get :fs) (fs/real-fs)))

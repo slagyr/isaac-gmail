@@ -14,12 +14,12 @@
     [isaac.comm.gmail.api :as gmail-api]
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.tenant :as tenant]
-    [isaac.config.loader :as loader]
-    [isaac.config.root :as root]
-    [isaac.fs :as fs]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.config.root :as root]
+    [isaac.foundation.fs :as fs]
     [isaac.google.registration :as registration]
     [isaac.google.tenants :as tenants]
-    [isaac.nexus :as nexus])
+    [isaac.foundation.nexus :as nexus])
   (:import
     (java.time Instant)))
 

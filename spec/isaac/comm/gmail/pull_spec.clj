@@ -3,11 +3,11 @@
     [isaac.comm.gmail.cursor :as cursor]
     [isaac.comm.gmail.handler :as handler]
     [isaac.comm.gmail.pull :as sut]
-    [isaac.config.loader :as loader]
+    [isaac.foundation.config.loader :as loader]
     [isaac.comm.gmail.api :as gmail-api]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]
-    [isaac.scheduler.runtime :as scheduler]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.scheduler.runtime :as scheduler]
     [speclj.core :refer :all]))
 
 (def push-cfg {:comms {:gmail {:gmail/account "yopp@tonotop.com"}}})
