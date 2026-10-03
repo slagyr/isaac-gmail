@@ -278,3 +278,29 @@ Feature: Gmail comm
       | type    | message.role | message.content                                                     |
       | message | user         | #"(?s).*\[attachment: report\.pdf \(application/pdf, .*\) at attachments/m-1/report\.pdf\].*" |
       | message | assistant    | Got the report.                                                     |
+
+  # Inbound attachments as bytes (isaac-vmlu): Gmail attachment data is
+  # base64url bytes. A PNG starts 0x89, which is not valid UTF-8; the file
+  # on disk must be those bytes, not U+FFFD replacement characters.
+
+  @wip
+  Scenario: a PNG email attachment is saved byte-identical and the turn is told (isaac-vmlu)
+    Given the crew "main" allows tools: "fs/*"
+    And the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-2 | t-2      |
+    And the Gmail API returns message "m-2":
+      | from    | ada@tonotop.com    |
+      | to      | yopp@tonotop.com   |
+      | subject | The photo          |
+      | body    | Attached, as asked |
+    And the Gmail API returns attachment "att-2" of message "m-2" named "badge.png" with bytes "89 50 4E 47 0D 0A 1A 0A"
+    And the following model responses are queued:
+      | model | type | content        |
+      | echo  | text | A PNG, got it. |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the file "attachments/m-2/badge.png" under the session working directory has bytes "89 50 4E 47 0D 0A 1A 0A"
+    And session "gmail-t-2" has transcript matching:
+      | type    | message.role | message.content                                                                            |
+      | message | user         | #"(?s).*\[attachment: badge\.png \(image/png, 8\) at attachments/m-2/badge\.png\].*"       |
+      | message | assistant    | A PNG, got it.                                                                             |
