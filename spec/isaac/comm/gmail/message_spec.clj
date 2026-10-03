@@ -33,7 +33,7 @@
   (it "sanitizes a filename, saves the attachment, and frames it"
     (let [fs* (fs/mem-fs)]
       (nexus/-with-nexus {:fs fs*}
-        (with-redefs [api/attachment-get! (constantly "hello")]
+        (with-redefs [api/attachment-get! (constantly (.getBytes "hello" "UTF-8"))]
           (should= ["[attachment: note.txt (text/plain, 5) at attachments/m-1/note.txt]"]
                    (inbound-attachment/save-all! "/work" {:id "m-1"
                                                            :attachments [{:filename "../note.txt"
@@ -41,11 +41,23 @@
                                                                           :attachment-id "a"}]}))
           (should= "hello" (fs/slurp fs* "/work/attachments/m-1/note.txt"))))))
 
+  (it "preserves PNG bytes on disk and reports their byte length"
+    (let [fs* (fs/mem-fs)
+          png (byte-array (map unchecked-byte [137 80 78 71 13 10 26 10]))]
+      (nexus/-with-nexus {:fs fs*}
+        (with-redefs [api/attachment-get! (constantly png)]
+          (should= ["[attachment: badge.png (image/png, 8) at attachments/m-2/badge.png]"]
+                   (inbound-attachment/save-all! "/work" {:id "m-2"
+                                                           :attachments [{:filename "badge.png"
+                                                                          :mime-type "image/png"
+                                                                          :attachment-id "a"}]}))
+          (should= (vec png) (vec (fs/read-bytes fs* "/work/attachments/m-2/badge.png" 0 8)))))))
+
   (it "does not save an attachment above the cap"
     (let [fs* (fs/mem-fs)]
       (nexus/-with-nexus {:fs fs*}
         (with-redefs [inbound-attachment/MAX-BYTES 4
-                      api/attachment-get! (constantly "hello")]
+                      api/attachment-get! (constantly (.getBytes "hello" "UTF-8"))]
           (should= ["[attachment: report.pdf (too large, not saved)]"]
                    (inbound-attachment/save-all! "/work" {:id "m-1"
                                                            :attachments [{:filename "report.pdf"

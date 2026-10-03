@@ -35,7 +35,7 @@
           (should= {:ok true}
                    (comm/send! c {:gmail/thread "t-1" :content "Looking now."}))
           (should= "t-1" (:thread-id @sent))
-          (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
             (should-contain "To: ada@tonotop.com" raw)
             (should-contain "Subject: Re: Deploy window" raw)
             (should-contain "In-Reply-To: <abc@tonotop.com>" raw)
@@ -61,7 +61,7 @@
                    (comm/send! c {:gmail/to "grace@tonotop.com" :gmail/subject "Deploy window"
                                   :content  "Ada asks: can we ship Friday?"}))
           (should-be-nil (:thread-id @sent))
-          (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
             (should-contain "To: grace@tonotop.com" raw)
             (should-contain "Subject: Deploy window" raw)
             (should-contain "Ada asks: can we ship Friday?" raw)))))
@@ -87,7 +87,7 @@
                    (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
                                   :thread-id "t-7" :content "On my way."}))
           (should= "t-7" (:thread-id @sent))
-          (let [raw (gmail-api/decode-raw (:raw @sent))]
+          (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
             (should-contain "To: ada@tonotop.com" raw)
             (should-contain "Subject: Re: Standup" raw)))))
 
@@ -111,7 +111,7 @@
                                     :gmail/subject "Report"
                                     :content       "Attached."
                                     :attachments   ["/cwd/report.pdf"]}))))
-        (let [raw (gmail-api/decode-raw (:raw @sent))]
+        (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
           (should-contain "Content-Type: multipart/mixed" raw)
           (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
 
@@ -128,7 +128,7 @@
             (should= {:ok true}
                      (comm/send! c {:gmail/thread "t-1" :content "Looking now."
                                     :attachments  ["/cwd/report.pdf"]}))))
-        (let [raw (gmail-api/decode-raw (:raw @sent))]
+        (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
           (should-contain "Content-Type: multipart/mixed" raw)
           (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
 
@@ -144,7 +144,7 @@
             (should= {:ok true}
                      (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
                                     :thread-id "t-7" :content "On my way." :attachments ["/cwd/report.pdf"]}))))
-        (let [raw (gmail-api/decode-raw (:raw @sent))]
+        (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
           (should-contain "Content-Type: multipart/mixed" raw)
           (should-contain "Content-Disposition: attachment; filename=\"report.pdf\"" raw))))
 

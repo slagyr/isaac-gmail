@@ -327,6 +327,25 @@
                                                               :body {:attachmentId attachment-id}}]))
                      (assoc-in [:attachment-data attachment-id] encoded))))))
 
+(defn- hex-bytes [hex]
+  (byte-array (map #(unchecked-byte (Integer/parseInt % 16)) (str/split hex #"\s+"))))
+
+(defn gmail-api-returns-attachment-bytes [attachment-id message-id filename hex]
+  (let [encoded (.encodeToString (.withoutPadding (java.util.Base64/getUrlEncoder)) (hex-bytes hex))]
+    (g/update! :gmail-messages update message-id
+               (fn [message]
+                 (-> message
+                     (update :payload #(assoc (or %) :parts [{:filename filename :mimeType "image/png"
+                                                              :body {:attachmentId attachment-id}}]))
+                     (assoc-in [:attachment-data attachment-id] encoded))))))
+
+(defn attachment-file-has-bytes [path hex]
+  (let [fs*      (feature-fs)
+        session  (first (session-store/list-sessions (session-store/registered-store)))
+        target   (str (:cwd session) "/" path)
+        expected (hex-bytes hex)]
+    (g/should= (vec expected) (vec (fs/read-bytes fs* target 0 (alength expected))))))
+
 (defn attachment-file-contains [path content]
   (let [fs*     (feature-fs)
         session (first (session-store/list-sessions (session-store/registered-store)))
@@ -622,7 +641,7 @@
             lines))))
 
 (defn- header-from-raw [raw name]
-  (header-from-decoded (try (gmail-api/decode-raw raw) (catch Exception _ raw)) name))
+  (header-from-decoded (try (String. (gmail-api/decode-raw raw) "UTF-8") (catch Exception _ raw)) name))
 
 (defn- body-from-decoded [decoded]
   (when (seq decoded)
@@ -678,7 +697,7 @@
                                    (or (g/get :outbound-http-requests) [])))
                      (g/get :outbound-http-request))
         raw      (get-in req [:body :raw])
-        decoded  (try (gmail-api/decode-raw raw) (catch Exception _ ""))]
+        decoded  (try (String. (gmail-api/decode-raw raw) "UTF-8") (catch Exception _ ""))]
     (g/should (seq raw))
     (doseq [[k v] expected]
       (let [key (str k)]
@@ -703,7 +722,7 @@
                              r)))
                        sends)
         raw      (get-in req [:body :raw])
-        decoded  (try (gmail-api/decode-raw raw) (catch Exception _ ""))]
+        decoded  (try (String. (gmail-api/decode-raw raw) "UTF-8") (catch Exception _ ""))]
     (g/should (seq raw))
     (doseq [[k v] expected]
       (let [key (str k)]
@@ -733,6 +752,12 @@
 
 (defgiven #"the Gmail API returns attachment \"([^\"]+)\" of message \"([^\"]+)\" named \"([^\"]+)\" with content \"([^\"]*)\""
   isaac.comm.gmail.gmail-steps/gmail-api-returns-attachment)
+
+(defgiven #"the Gmail API returns attachment \"([^\"]+)\" of message \"([^\"]+)\" named \"([^\"]+)\" with bytes \"([^\"]+)\""
+  isaac.comm.gmail.gmail-steps/gmail-api-returns-attachment-bytes)
+
+(defthen #"the file \"([^\"]+)\" under the session working directory has bytes \"([^\"]+)\""
+  isaac.comm.gmail.gmail-steps/attachment-file-has-bytes)
 
 (defgiven "the Gmail API inbox lists messages:"
   isaac.comm.gmail.gmail-steps/inbox-lists)

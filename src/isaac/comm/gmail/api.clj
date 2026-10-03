@@ -35,7 +35,7 @@
                    (.getBytes (str rfc2822) "UTF-8")))
 
 (defn decode-raw [b64]
-  (String. (.decode (Base64/getUrlDecoder) (str b64)) "UTF-8"))
+  (.decode (Base64/getUrlDecoder) (str b64)))
 
 (defn access-token
   "Valid Google access token. Feature steps redef this; production resolves isaac.google.token."
@@ -92,7 +92,7 @@
                       {:status (:status resp) :id id :body (:body resp)})))))
 
 (defn attachment-get!
-  "GET one MIME attachment's base64url data and decode it as UTF-8 text."
+  "GET one MIME attachment's base64url data and decode it to raw bytes."
   [message-id attachment-id]
   (let [resp (-http! {:method "GET"
                       :url (str MESSAGES-URL "/" message-id "/attachments/" attachment-id)

@@ -344,6 +344,7 @@ session's working directory, and that the turn's input names the file.
 - **An attachment never shows up on disk.** Confirm the route actually
   converses — attachments are only saved on that path, not `:ignore` or
   `:task`. `[verify]`
+- **A file landed but is not a valid image.** Check the file bytes: a PNG begins with `89 50 4E 47`, not UTF-8 replacement bytes `EF BF BD`. That indicates attachment bytes were decoded as text and corrupted, not a missing download. Re-fetch the original attachment from Gmail; the corrupted file cannot be repaired.
 - **The turn's input says "(download failed)."** Gmail's `attachments.get`
   call failed — check the log for `:gmail.attachment/download-failed` and
   retry once the underlying (usually transient) cause clears.

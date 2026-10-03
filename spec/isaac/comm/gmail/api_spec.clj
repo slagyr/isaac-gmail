@@ -12,6 +12,18 @@
     (with-redefs [sut/access-token (constantly "at-1")]
       (it)))
 
+  (context "inbound attachment bytes (isaac-vmlu)"
+    (it "decodes base64url as the original PNG bytes"
+      (let [bytes (sut/decode-raw "iVBORw0KGgo")]
+        (should (bytes? bytes))
+        (should= [137 80 78 71 13 10 26 10] (mapv #(bit-and % 0xff) bytes))))
+
+    (it "returns the original bytes from attachments.get"
+      (with-redefs [sut/-http! (stub-http 200 {:data "iVBORw0KGgo"})]
+        (let [bytes (sut/attachment-get! "m-2" "att-2")]
+          (should (bytes? bytes))
+          (should= [137 80 78 71 13 10 26 10] (mapv #(bit-and % 0xff) bytes))))))
+
   (describe "labels-create!"
 
     (it "POSTs the label name and returns Gmail's body"

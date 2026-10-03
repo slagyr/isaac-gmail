@@ -20,13 +20,12 @@
   (mapv (fn [{:keys [filename mime-type attachment-id]}]
           (let [filename (sanitize-filename filename)]
             (try
-              (let [content (api/attachment-get! (:id message) attachment-id)
-                    bytes   (.getBytes (str content) "UTF-8")]
+              (let [bytes (api/attachment-get! (:id message) attachment-id)]
                 (if (> (alength bytes) MAX-BYTES)
                   (str "[attachment: " filename " (too large, not saved)]")
                   (let [path (target cwd (:id message) filename)]
                     (fs/mkdirs (fs/instance) (fs/parent path))
-                    (fs/spit (fs/instance) path content)
+                    (fs/write-bytes (fs/instance) path bytes)
                     (line filename mime-type (alength bytes) (:id message)))))
               (catch Exception e
                 (log/warn :gmail.attachment/download-failed :attachment attachment-id :error (.getMessage e))

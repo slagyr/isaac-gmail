@@ -283,7 +283,6 @@ Feature: Gmail comm
   # base64url bytes. A PNG starts 0x89, which is not valid UTF-8; the file
   # on disk must be those bytes, not U+FFFD replacement characters.
 
-  @wip
   Scenario: a PNG email attachment is saved byte-identical and the turn is told (isaac-vmlu)
     Given the crew "main" allows tools: "fs/*"
     And the Gmail API history since "1000" adds messages:
