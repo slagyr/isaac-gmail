@@ -8,11 +8,11 @@
 (describe "gmail handler - default crew resolution (isaac-rfmh)"
 
   (it "the comm's own gmail/crew wins"
-    (should= "ops" (#'sut/default-crew {:comms {:gmail {:gmail/crew "ops"}} :defaults {:frequencies {:crew :yopp}}})))
+    (should= "ops" (#'sut/default-crew {:comms {:gmail {:gmail/crew "ops"}} :defaults {:frequencies {:crew :isaac}}})))
 
   (it "falls back to the operator's default crew, keyword or string"
-    (should= "yopp" (#'sut/default-crew {:comms {:gmail {}} :defaults {:frequencies {:crew :yopp}}}))
-    (should= "yopp" (#'sut/default-crew {:comms {:gmail {}} :defaults {:frequencies {:crew "yopp"}}})))
+    (should= "isaac" (#'sut/default-crew {:comms {:gmail {}} :defaults {:frequencies {:crew :isaac}}}))
+    (should= "isaac" (#'sut/default-crew {:comms {:gmail {}} :defaults {:frequencies {:crew "isaac"}}})))
 
   (it "is nil when nothing names a crew - never a crew called main (isaac-zule)"
     (should-be-nil (#'sut/default-crew {}))))
@@ -31,7 +31,7 @@
 (describe "gmail handler - tenant-of (isaac-sb6d)"
 
   (it "reads the comm's own gmail/google tenant"
-    (should= :tonotop (#'sut/tenant-of {:comms {:gmail {:gmail/google :tonotop}}})))
+    (should= :marigold (#'sut/tenant-of {:comms {:gmail {:gmail/google :marigold}}})))
 
   (it "is nil on a single-tenant host"
     (should-be-nil (#'sut/tenant-of {:comms {:gmail {}}}))))
@@ -44,6 +44,6 @@
                     api/create-session! (fn [id _] {:name id})
                     api/dispatch!       (fn [req] (reset! dispatched req))
                     sut/live-comm       (fn [_] nil)]
-        (#'sut/start-turn! {:id "m-1" :threadId "t-1" :from "ada@tonotop.com" :subject "Hi" :body "Yo"} {} "main")
+        (#'sut/start-turn! {:id "m-1" :threadId "t-1" :from "ada@marigold.example" :subject "Hi" :body "Yo"} {} "main")
         (should= "gmail-t-1" (:session-key @dispatched))
         (should= guidance/TEXT (:guidance @dispatched))))))

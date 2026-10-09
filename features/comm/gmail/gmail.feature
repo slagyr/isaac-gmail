@@ -11,11 +11,11 @@ Feature: Gmail comm
     Given default Grover setup in "/test/gmail"
     And config:
       | log.output                   | memory              |
-      | google.tonotop.project       | marigold            |
-      | comms.gmail.gmail/account    | yopp@tonotop.com    |
+      | google.marigold.project       | marigold            |
+      | comms.gmail.gmail/account    | isaac@marigold.example    |
       | comms.gmail.gmail/crew       | main                |
       | gmail-routes.team.order      | 90                  |
-      | gmail-routes.team.match.from | ada@tonotop.com     |
+      | gmail-routes.team.match.from | ada@marigold.example     |
       | gmail-routes.team.action     | converse            |
       | sessions.naming-strategy     | sequential          |
     And the google auth store has access "at-1" and refresh "rt-1"
@@ -27,13 +27,13 @@ Feature: Gmail comm
       | m-1 | t-1      |
       | m-2 | t-2      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com     |
-      | to      | yopp@tonotop.com    |
+      | from    | ada@marigold.example     |
+      | to      | isaac@marigold.example    |
       | subject | Deploy window       |
       | body    | Can we ship Friday? |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | Lunch            |
       | body    | Tacos?           |
     And the following model responses are queued:
@@ -44,7 +44,7 @@ Feature: Gmail comm
     When Gmail pushes a watch notification with history id "1042"
     Then session "gmail-t-1" has transcript matching:
       | type    | message.role | message.content                                    |
-      | message | user         | #".*ada@tonotop.com.*Deploy window.*ship Friday.*" |
+      | message | user         | #".*ada@marigold.example.*Deploy window.*ship Friday.*" |
       | message | assistant    | Friday works.                                      |
     And session "gmail-t-2" has transcript matching:
       | type    | message.role | message.content     |
@@ -57,10 +57,10 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from       | ada@tonotop.com     |
-      | to         | yopp@tonotop.com    |
+      | from       | ada@marigold.example     |
+      | to         | isaac@marigold.example    |
       | subject    | Deploy window       |
-      | message-id | <abc@tonotop.com>   |
+      | message-id | <abc@marigold.example>   |
       | body       | Can we ship Friday? |
     And the following model responses are queued:
       | model | type | content       |
@@ -71,10 +71,10 @@ Feature: Gmail comm
       | headers.Authorization | Bearer at-1 |
       | body.threadId         | t-1         |
     And the sent mail decodes to:
-      | To          | ada@tonotop.com   |
+      | To          | ada@marigold.example   |
       | Subject     | Re: Deploy window |
-      | In-Reply-To | <abc@tonotop.com> |
-      | References  | <abc@tonotop.com> |
+      | In-Reply-To | <abc@marigold.example> |
+      | References  | <abc@marigold.example> |
       | text        | Friday works.     |
 
   Scenario: an already-processed push starts nothing
@@ -90,8 +90,8 @@ Feature: Gmail comm
       | id  | threadId | historyId |
       | m-7 | t-7      | 2001      |
     And the Gmail API returns message "m-7":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | After the gap    |
       | body    | Still there?     |
     And the following model responses are queued:
@@ -115,7 +115,7 @@ Feature: Gmail comm
       | messageAdded | m-5 | t-5      | INBOX      |
     And the Gmail API returns message "m-5":
       | from    | mallory@example.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | Prize               |
       | body    | You won             |
     When Gmail pushes a watch notification with history id "1099"
@@ -133,24 +133,24 @@ Feature: Gmail comm
   Scenario: a *@domain route admits the domain only when Gmail authenticates it (isaac-dymn, isaac-sb6d)
     Given config:
       | gmail-routes.domain.order      | 10            |
-      | gmail-routes.domain.match.from | *@tonotop.com |
+      | gmail-routes.domain.match.from | *@marigold.example |
       | gmail-routes.domain.action     | converse      |
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-6 | t-6      |
       | m-7 | t-7      |
     And the Gmail API returns message "m-6":
-      | from         | Grace Hopper <grace@tonotop.com>                                                                          |
-      | to           | yopp@tonotop.com                                                                                          |
+      | from         | Grace Hopper <grace@marigold.example>                                                                          |
+      | to           | isaac@marigold.example                                                                                          |
       | subject      | Ship it                                                                                                   |
       | body         | Friday?                                                                                                   |
-      | auth-results | mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com; dmarc=pass header.from=tonotop.com |
+      | auth-results | mx.google.com; dkim=pass header.d=marigold.example; spf=pass smtp.mailfrom=marigold.example; dmarc=pass header.from=marigold.example |
     And the Gmail API returns message "m-7":
-      | from         | Grace Hopper <grace@tonotop.com>                                     |
-      | to           | yopp@tonotop.com                                                     |
+      | from         | Grace Hopper <grace@marigold.example>                                     |
+      | to           | isaac@marigold.example                                                     |
       | subject      | Wire me money                                                        |
       | body         | Urgently                                                             |
-      | auth-results | mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com |
+      | auth-results | mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=marigold.example |
     And the following model responses are queued:
       | model | type | content |
       | echo  | text | Friday. |
@@ -172,8 +172,8 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com     |
-      | to      | yopp@tonotop.com    |
+      | from    | ada@marigold.example     |
+      | to      | isaac@marigold.example    |
       | subject | Deploy window       |
       | body    | Can we ship Friday? |
     And the following model responses are queued:
@@ -193,19 +193,19 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com          |
-      | to      | yopp@tonotop.com         |
+      | from    | ada@marigold.example          |
+      | to      | isaac@marigold.example         |
       | subject | Deploy window            |
       | body    | Can you ask Grace today? |
     And the following model responses are queued:
       | model | type | content     | tool_call  | arguments                                                                                                                 |
-      | echo  |      |             | comm__send | {"comm":"gmail","gmail.to":"grace@tonotop.com","gmail.subject":"Deploy window","content":"Ada asks: can we ship Friday?"} |
+      | echo  |      |             | comm__send | {"comm":"gmail","gmail.to":"grace@marigold.example","gmail.subject":"Deploy window","content":"Ada asks: can we ship Friday?"} |
       | echo  | text | Asked Grace. |            |                                                                                                                           |
     When Gmail pushes a watch notification with history id "1042"
     And the delivery worker ticks
     Then the Gmail API sent 2 messages
-    And the sent mail to "grace@tonotop.com" decodes to:
-      | To      | grace@tonotop.com             |
+    And the sent mail to "grace@marigold.example" decodes to:
+      | To      | grace@marigold.example             |
       | Subject | Deploy window                 |
       | text    | Ada asks: can we ship Friday? |
 
@@ -215,10 +215,10 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from       | ada@tonotop.com     |
-      | to         | yopp@tonotop.com    |
+      | from       | ada@marigold.example     |
+      | to         | isaac@marigold.example    |
       | subject    | Deploy window       |
-      | message-id | <abc@tonotop.com>   |
+      | message-id | <abc@marigold.example>   |
       | body       | Can we ship Friday? |
     And the following model responses are queued:
       | model | type | content       | tool_call  | arguments                                                     |
@@ -237,19 +237,19 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com            |
-      | to      | yopp@tonotop.com           |
+      | from    | ada@marigold.example            |
+      | to      | isaac@marigold.example           |
       | subject | Report                     |
       | body    | Send Grace the report.     |
     And the following model responses are queued:
       | model | type | content | tool_call  | arguments                                                                                                              |
-      | echo  |      |         | comm__send | {"comm":"gmail","gmail.to":"grace@tonotop.com","gmail.subject":"Report","content":"Attached.","attachments":["report.pdf"]} |
+      | echo  |      |         | comm__send | {"comm":"gmail","gmail.to":"grace@marigold.example","gmail.subject":"Report","content":"Attached.","attachments":["report.pdf"]} |
       | echo  | text | Sent.   |            |                                                                                                                        |
     When Gmail pushes a watch notification with history id "1042"
     And the delivery worker ticks
     Then the Gmail API sent 2 messages
-    And the sent mail to "grace@tonotop.com" decodes to:
-      | To          | grace@tonotop.com |
+    And the sent mail to "grace@marigold.example" decodes to:
+      | To          | grace@marigold.example |
       | Subject     | Report            |
       | text        | Attached.         |
       | attachments | report.pdf        |
@@ -264,8 +264,8 @@ Feature: Gmail comm
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com    |
-      | to      | yopp@tonotop.com   |
+      | from    | ada@marigold.example    |
+      | to      | isaac@marigold.example   |
       | subject | The report         |
       | body    | Attached, as asked |
     And the Gmail API returns attachment "att-1" of message "m-1" named "report.pdf" with content "%PDF-1.4 stub"
@@ -289,8 +289,8 @@ Feature: Gmail comm
       | id  | threadId |
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com    |
-      | to      | yopp@tonotop.com   |
+      | from    | ada@marigold.example    |
+      | to      | isaac@marigold.example   |
       | subject | The photo          |
       | body    | Attached, as asked |
     And the Gmail API returns attachment "att-2" of message "m-2" named "badge.png" with bytes "89 50 4E 47 0D 0A 1A 0A"

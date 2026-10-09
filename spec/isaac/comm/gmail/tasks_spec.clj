@@ -27,11 +27,11 @@
     (it "sends a hail with the mail payload"
       (let [sent (atom nil)]
         (with-redefs [sut/resolve-hail-send! (fn [] (fn [record] (reset! sent record) record))]
-          (sut/dispatch! nil {} {:id "m-1" :threadId "t-1" :from "ada@tonotop.com" :subject "Invoice"
+          (sut/dispatch! nil {} {:id "m-1" :threadId "t-1" :from "ada@marigold.example" :subject "Invoice"
                                  :body "Please file this."}
                         {:route "invoices" :action :task :band "ops-inbox"})
           (should= {:frequencies {:band "ops-inbox"}
-                    :params      {:gmail/id "m-1" :gmail/thread-id "t-1" :from "ada@tonotop.com"
+                    :params      {:gmail/id "m-1" :gmail/thread-id "t-1" :from "ada@marigold.example"
                                   :subject "Invoice" :body-excerpt "Please file this."}}
                    @sent))))
 
@@ -56,8 +56,8 @@
       (let [send-calls (atom [])]
         (with-redefs [sut/resolve-hail-send! (fn [] (fn [record] record))
                       api/messages-send!      (fn [req] (swap! send-calls conj req) {:id "sent-1"})]
-          (sut/dispatch! nil {} {:id "m-1" :threadId "t-1" :from "ada@tonotop.com" :subject "Invoice #4821"
-                                 :message-id "<inv@tonotop.com>" :body "b"}
+          (sut/dispatch! nil {} {:id "m-1" :threadId "t-1" :from "ada@marigold.example" :subject "Invoice #4821"
+                                 :message-id "<inv@marigold.example>" :body "b"}
                         {:route "invoices" :action :task :band "ops-inbox" :ack true})
           (should= 1 (count @send-calls))
           (should= "t-1" (:thread-id (first @send-calls)))))))

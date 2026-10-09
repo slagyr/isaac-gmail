@@ -505,7 +505,7 @@
                                    {})))
         (with-gmail-stubs
           (fn []
-            (handler/handle-watch! {:data {:emailAddress "yopp@tonotop.com"
+            (handler/handle-watch! {:data {:emailAddress "isaac@marigold.example"
                                            :historyId    (str history-id)}})
             (g/assoc! :gmail-watch-pushed true)
             (session-steps/await-turn!)))))))

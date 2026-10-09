@@ -5,7 +5,7 @@ Feature: Gmail triage fallback for unrouted mail
   going straight to :unrouted. The model picks one route name or "ignore";
   anything else falls back to gmail/triage.default. The verdict is always
   recorded as label isaac/triage/<verdict>. With gmail/triage.apply false
-  (the default) that is all — Micah audits verdicts before trusting them.
+  (the default) that is all — Hieronymus audits verdicts before trusting them.
   With apply true the message is dispatched as if that route had matched.
   Bean: isaac-betb.
 
@@ -13,12 +13,12 @@ Feature: Gmail triage fallback for unrouted mail
     Given default Grover setup in "/test/gmail-triage"
     And config:
       | log.output                   | memory         |
-      | google.tonotop.project       | marigold       |
-      | comms.gmail.gmail/account    | yopp@tonotop.com |
+      | google.marigold.project       | marigold       |
+      | comms.gmail.gmail/account    | isaac@marigold.example |
       | comms.gmail.gmail/crew       | main           |
       | sessions.naming-strategy     | sequential     |
       | gmail-routes.team.order      | 90             |
-      | gmail-routes.team.match.from | *@tonotop.com  |
+      | gmail-routes.team.match.from | *@marigold.example  |
       | gmail-routes.team.action     | converse       |
       | gmail-routes.team.crew       | main           |
       | gmail-routes.team.desc       | Colleagues     |
@@ -37,7 +37,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | pat@example.com |
-      | to      | yopp@tonotop.com |
+      | to      | isaac@marigold.example |
       | subject | Quick question  |
       | body    | Are you free?   |
     And the following model responses are queued:
@@ -65,7 +65,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | pat@example.com |
-      | to      | yopp@tonotop.com |
+      | to      | isaac@marigold.example |
       | subject | Quick question  |
       | body    | Are you free?   |
     And the following model responses are queued:
@@ -93,7 +93,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | mallory@example.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | Prize               |
       | body    | You won             |
     And the following model responses are queued:
@@ -114,7 +114,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | pat@example.com  |
-      | to      | yopp@tonotop.com |
+      | to      | isaac@marigold.example |
       | subject | First one        |
       | body    | Hello            |
     And the following model responses are queued:
@@ -127,7 +127,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
       | from    | pat@example.com  |
-      | to      | yopp@tonotop.com |
+      | to      | isaac@marigold.example |
       | subject | Second one       |
       | body    | Hi again         |
     And the following model responses are queued:
@@ -146,7 +146,7 @@ Feature: Gmail triage fallback for unrouted mail
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | bob@example.com |
-      | to      | yopp@tonotop.com |
+      | to      | isaac@marigold.example |
       | subject | Random thought  |
       | body    | Did you see this? |
     When Gmail pushes a watch notification with history id "1042"

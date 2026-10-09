@@ -25,7 +25,7 @@
         q     (some-> (get args "q") str str/trim)
         limit (or (some-> (get args "limit") str parse-long) 25)]
     (if (str/blank? q)
-      (error "q is required: a Gmail search query, e.g. from:micah@tonotop.com newer_than:7d")
+      (error "q is required: a Gmail search query, e.g. from:hieronymus@marigold.example newer_than:7d")
       (try
         (let [response (gmail-api/messages-search! {:q q :limit limit})
               ids      (mapv :id (:messages response))

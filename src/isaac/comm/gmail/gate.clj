@@ -16,7 +16,7 @@
   (set (map name (or (:label-ids message) (:labelIds message) []))))
 
 (defn address
-  "The bare address out of a From header: \"Ada <ada@tonotop.com>\" → ada@tonotop.com."
+  "The bare address out of a From header: \"Ada <ada@marigold.example>\" → ada@marigold.example."
   [from]
   (let [from (str/trim (str (or from "")))]
     (str/lower-case

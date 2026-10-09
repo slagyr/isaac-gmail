@@ -7,8 +7,8 @@
 (def a-message
   {:id       "m-1"
    :threadId "t-1"
-   :payload  {:headers [{:name "From" :value "Ada Lovelace <ada@tonotop.com>"}
-                        {:name "To" :value "yopp@tonotop.com"}
+   :payload  {:headers [{:name "From" :value "Ada Lovelace <ada@marigold.example>"}
+                        {:name "To" :value "isaac@marigold.example"}
                         {:name "Subject" :value "Deploy window"}
                         {:name "Message-ID" :value "<abc@mail>"}]
               :body    {:data "Q2FuIHdlIHNoaXAgRnJpZGF5Pw"}}})
@@ -25,10 +25,10 @@
     (it "answers headers for each hit"
       (with-redefs [gmail-api/messages-search! (fn [_] {:messages [{:id "m-1"}]})
                     gmail-api/messages-get!    (fn [_] a-message)]
-        (let [result (:result (sut/search {:q "from:ada@tonotop.com"}))]
+        (let [result (:result (sut/search {:q "from:ada@marigold.example"}))]
           (should= 1 (count (:messages result)))
           (should= "Deploy window" (:subject (first (:messages result))))
-          (should= "Ada Lovelace <ada@tonotop.com>" (:from (first (:messages result))))
+          (should= "Ada Lovelace <ada@marigold.example>" (:from (first (:messages result))))
           (should-not-contain :body (keys (first (:messages result)))))))
 
     (it "passes the query and limit through"

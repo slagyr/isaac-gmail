@@ -10,9 +10,9 @@ Feature: Gmail INBOX watch
     Given default Grover setup in "/test/gmail-watch"
     And config:
       | log.output                        | memory                         |
-      | google.tonotop.topic              | projects/marigold/topics/isaac |
-      | google.tonotop.renew-within-hours | 24                             |
-      | comms.gmail.gmail/account         | yopp@tonotop.com               |
+      | google.marigold.topic              | projects/marigold/topics/isaac |
+      | google.marigold.renew-within-hours | 24                             |
+      | comms.gmail.gmail/account         | isaac@marigold.example               |
     And the google auth store has access "at-1" and refresh "rt-1"
     And the clock is fixed at "2026-09-18T12:00:00Z"
 
@@ -27,26 +27,26 @@ Feature: Gmail INBOX watch
       | body.labelFilterAction | include                        |
     And the log has entries matching:
       | level | event              | key              | expires-at           |
-      | :info | :google/registered | yopp@tonotop.com | 2026-09-25T12:00:00Z |
+      | :info | :google/registered | isaac@marigold.example | 2026-09-25T12:00:00Z |
     And the gmail history cursor is "900"
 
   Scenario: a watch outside the renew window is left alone
-    Given the registration timer remembers a watch for "yopp@tonotop.com" expiring at "2026-09-24T12:00:00Z"
+    Given the registration timer remembers a watch for "isaac@marigold.example" expiring at "2026-09-24T12:00:00Z"
     When the Gmail watch timer ticks
     Then no outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/watch" was made
 
   Scenario: a watch inside the renew window is watched again and the new expiry read back
-    Given the registration timer remembers a watch for "yopp@tonotop.com" expiring at "2026-09-19T06:00:00Z"
+    Given the registration timer remembers a watch for "isaac@marigold.example" expiring at "2026-09-19T06:00:00Z"
     And the Gmail API grants a watch with history id "1500" expiring at "2026-09-25T12:00:00Z"
     When the Gmail watch timer ticks
     Then an outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/watch" matches:
       | method | POST |
     And the log has entries matching:
       | level | event           | key              | expires-at           |
-      | :info | :google/renewed | yopp@tonotop.com | 2026-09-25T12:00:00Z |
+      | :info | :google/renewed | isaac@marigold.example | 2026-09-25T12:00:00Z |
 
   Scenario: a mailbox removed from config has its watch stopped
-    Given the registration timer remembers a watch for "yopp@tonotop.com" expiring at "2026-09-24T12:00:00Z"
+    Given the registration timer remembers a watch for "isaac@marigold.example" expiring at "2026-09-24T12:00:00Z"
     And config:
       | comms.gmail.gmail/account | #delete |
     When the Gmail watch timer ticks
@@ -54,16 +54,16 @@ Feature: Gmail INBOX watch
       | method | POST |
     And the log has entries matching:
       | level | event                | key              |
-      | :info | :google/unregistered | yopp@tonotop.com |
+      | :info | :google/unregistered | isaac@marigold.example |
 
   Scenario: a refused watch is logged with Gmail's reason and tried again next tick
     Given the Gmail API refuses the watch with 403 "Insufficient Permission"
     When the Gmail watch timer ticks
     Then the log has entries matching:
       | level  | event                       | key              | reason                       |
-      | :error | :google/registration-failed | yopp@tonotop.com | #".*Insufficient Permission.*" |
+      | :error | :google/registration-failed | isaac@marigold.example | #".*Insufficient Permission.*" |
     Given the Gmail API grants a watch with history id "900" expiring at "2026-09-25T12:00:00Z"
     When the Gmail watch timer ticks
     Then the log has entries matching:
       | level | event              | key              |
-      | :info | :google/registered | yopp@tonotop.com |
+      | :info | :google/registered | isaac@marigold.example |

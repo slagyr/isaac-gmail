@@ -10,10 +10,10 @@
     [isaac.foundation.scheduler.runtime :as scheduler]
     [speclj.core :refer :all]))
 
-(def push-cfg {:comms {:gmail {:gmail/account "yopp@tonotop.com"}}})
-(def pull-cfg {:comms {:gmail {:gmail/account "yopp@tonotop.com" :gmail/mode :pull}}})
+(def push-cfg {:comms {:gmail {:gmail/account "isaac@marigold.example"}}})
+(def pull-cfg {:comms {:gmail {:gmail/account "isaac@marigold.example" :gmail/mode :pull}}})
 (def pull-cfg-custom-interval
-  {:comms {:gmail {:gmail/account "yopp@tonotop.com" :gmail/mode :pull :gmail/pull-interval-ms 5000}}})
+  {:comms {:gmail {:gmail/account "isaac@marigold.example" :gmail/mode :pull :gmail/pull-interval-ms 5000}}})
 
 (describe "gmail pull mode config (isaac-u80t)"
 

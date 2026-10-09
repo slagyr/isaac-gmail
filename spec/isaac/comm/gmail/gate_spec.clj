@@ -22,32 +22,32 @@
   (describe "address"
 
     (it "reads the address out of a display-name From header"
-      (should= "ada@tonotop.com" (sut/address "Ada Lovelace <ADA@Tonotop.com>")))
+      (should= "ada@marigold.example" (sut/address "Ada Lovelace <ADA@Marigold.example>")))
 
     (it "lower-cases a bare address"
-      (should= "ada@tonotop.com" (sut/address "Ada@Tonotop.com"))))
+      (should= "ada@marigold.example" (sut/address "Ada@Marigold.example"))))
 
   (describe "authenticated? (isaac-dymn)"
 
-    (def dmarc-pass "mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com; dmarc=pass header.from=tonotop.com")
+    (def dmarc-pass "mx.google.com; dkim=pass header.d=marigold.example; spf=pass smtp.mailfrom=marigold.example; dmarc=pass header.from=marigold.example")
 
     (it "vouches for a domain Gmail's dmarc passed"
-      (should (sut/authenticated? {:auth-results dmarc-pass} "tonotop.com")))
+      (should (sut/authenticated? {:auth-results dmarc-pass} "marigold.example")))
 
     (it "does not vouch with no Authentication-Results at all"
-      (should-not (sut/authenticated? {} "tonotop.com")))
+      (should-not (sut/authenticated? {} "marigold.example")))
 
     (it "does not vouch when dkim and spf both fail"
       (should-not (sut/authenticated?
-                    {:auth-results "mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com"}
-                    "tonotop.com")))
+                    {:auth-results "mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=marigold.example"}
+                    "marigold.example")))
 
     (it "vouches when spf+dkim both pass and are aligned to the domain"
       (should (sut/authenticated?
-                {:auth-results "mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com"}
-                "tonotop.com")))
+                {:auth-results "mx.google.com; dkim=pass header.d=marigold.example; spf=pass smtp.mailfrom=marigold.example"}
+                "marigold.example")))
 
     (it "does not vouch when spf+dkim pass for somebody else's domain"
       (should-not (sut/authenticated?
                     {:auth-results "mx.google.com; dkim=pass header.d=mallory.example; spf=pass smtp.mailfrom=mallory.example"}
-                    "tonotop.com")))))
+                    "marigold.example")))))

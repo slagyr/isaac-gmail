@@ -20,20 +20,20 @@
 (describe "RFC 2822 reply building"
 
   (it "threads a reply with To, Re: subject, In-Reply-To and References"
-    (let [raw (sut/reply-raw {:from    "ada@tonotop.com"
-                              :to      "yopp@tonotop.com"
+    (let [raw (sut/reply-raw {:from    "ada@marigold.example"
+                              :to      "isaac@marigold.example"
                               :subject "Deploy window"
-                              :message-id "<abc@tonotop.com>"
+                              :message-id "<abc@marigold.example>"
                               :body    "Friday works."})]
-      (should (str/includes? raw "To: ada@tonotop.com"))
+      (should (str/includes? raw "To: ada@marigold.example"))
       (should (str/includes? raw "Subject: Re: Deploy window"))
-      (should (str/includes? raw "In-Reply-To: <abc@tonotop.com>"))
-      (should (str/includes? raw "References: <abc@tonotop.com>"))
+      (should (str/includes? raw "In-Reply-To: <abc@marigold.example>"))
+      (should (str/includes? raw "References: <abc@marigold.example>"))
       (should (str/includes? raw "Friday works."))
       (should-not (str/includes? raw "Subject: Re: Re:"))))
 
   (it "does not double Re: when the original already has it"
-    (let [raw (sut/reply-raw {:from "ada@tonotop.com" :subject "Re: Lunch" :body "Yes."})]
+    (let [raw (sut/reply-raw {:from "ada@marigold.example" :subject "Re: Lunch" :body "Yes."})]
       (should (str/includes? raw "Subject: Re: Lunch"))
       (should-not (str/includes? raw "Subject: Re: Re:"))))
   )
@@ -42,12 +42,12 @@
 
   (it "builds a multipart/mixed new message with a text part and one attachment part"
     (let [fs*  (fs-with "/cwd/report.pdf" "%PDF-1.4 stub")
-          raw  (sut/multipart-message-raw {:to          "grace@tonotop.com"
+          raw  (sut/multipart-message-raw {:to          "grace@marigold.example"
                                            :subject     "Report"
                                            :body        "Attached."
                                            :attachments ["/cwd/report.pdf"]
                                            :fs          fs*})]
-      (should (str/includes? raw "To: grace@tonotop.com"))
+      (should (str/includes? raw "To: grace@marigold.example"))
       (should (str/includes? raw "Subject: Report"))
       (should (str/includes? raw "MIME-Version: 1.0"))
       (should (re-find #"(?i)Content-Type: multipart/mixed; boundary=\"[^\"]+\"" raw))
@@ -60,7 +60,7 @@
 
   (it "falls back to application/octet-stream for an unrecognized extension"
     (let [fs* (fs-with "/cwd/data.xyz" "abc")
-          raw (sut/multipart-message-raw {:to          "grace@tonotop.com"
+          raw (sut/multipart-message-raw {:to          "grace@marigold.example"
                                           :subject     "Data"
                                           :body        "Here."
                                           :attachments ["/cwd/data.xyz"]
@@ -69,22 +69,22 @@
 
   (it "builds a multipart reply carrying the threading headers and an attachment"
     (let [fs* (fs-with "/cwd/report.pdf" "%PDF-1.4 stub")
-          raw (sut/multipart-reply-raw {:from        "ada@tonotop.com"
+          raw (sut/multipart-reply-raw {:from        "ada@marigold.example"
                                         :subject     "Deploy window"
-                                        :message-id  "<abc@tonotop.com>"
+                                        :message-id  "<abc@marigold.example>"
                                         :body        "See attached."
                                         :attachments ["/cwd/report.pdf"]
                                         :fs          fs*})]
-      (should (str/includes? raw "To: ada@tonotop.com"))
+      (should (str/includes? raw "To: ada@marigold.example"))
       (should (str/includes? raw "Subject: Re: Deploy window"))
-      (should (str/includes? raw "In-Reply-To: <abc@tonotop.com>"))
-      (should (str/includes? raw "References: <abc@tonotop.com>"))
+      (should (str/includes? raw "In-Reply-To: <abc@marigold.example>"))
+      (should (str/includes? raw "References: <abc@marigold.example>"))
       (should (str/includes? raw "See attached."))
       (should (str/includes? raw "Content-Disposition: attachment; filename=\"report.pdf\""))))
 
   (it "carries more than one attachment as separate parts"
     (let [fs* (fs-with "/cwd/a.txt" "AAA" "/cwd/b.png" "BBB")
-          raw (sut/multipart-message-raw {:to          "grace@tonotop.com"
+          raw (sut/multipart-message-raw {:to          "grace@marigold.example"
                                           :subject     "Files"
                                           :body        "Two files."
                                           :attachments ["/cwd/a.txt" "/cwd/b.png"]

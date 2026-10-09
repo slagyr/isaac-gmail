@@ -11,8 +11,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given default Grover setup in "/test/gmail-tasks"
     And config:
       | log.output                | memory           |
-      | google.tonotop.project    | marigold         |
-      | comms.gmail.gmail/account | yopp@tonotop.com |
+      | google.marigold.project    | marigold         |
+      | comms.gmail.gmail/account | isaac@marigold.example |
       | comms.gmail.gmail/crew    | main             |
       | sessions.naming-strategy  | sequential       |
     And the google auth store has access "at-1" and refresh "rt-1"
@@ -22,7 +22,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given the hail module is installed
     And config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -30,8 +30,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com   |
-      | to      | yopp@tonotop.com  |
+      | from    | ada@marigold.example   |
+      | to      | isaac@marigold.example  |
       | subject | Invoice #4821     |
       | body    | Please file this. |
     When Gmail pushes a watch notification with history id "1042"
@@ -40,7 +40,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | path             | value             |
       | gmail/id         | m-1               |
       | gmail/thread-id  | t-1               |
-      | from             | ada@tonotop.com   |
+      | from             | ada@marigold.example   |
       | subject          | Invoice #4821     |
       | body-excerpt     | Please file this. |
     And the session count is 0
@@ -49,7 +49,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given the hail module is installed
     And config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -58,8 +58,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com   |
-      | to      | yopp@tonotop.com  |
+      | from    | ada@marigold.example   |
+      | to      | isaac@marigold.example  |
       | subject | Invoice #4821     |
       | body    | Please file this. |
     When Gmail pushes a watch notification with history id "1042"
@@ -69,7 +69,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given the hail module is installed
     And config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -78,17 +78,17 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from       | ada@tonotop.com   |
-      | to         | yopp@tonotop.com  |
+      | from       | ada@marigold.example   |
+      | to         | isaac@marigold.example  |
       | subject    | Invoice #4821     |
-      | message-id | <inv@tonotop.com> |
+      | message-id | <inv@marigold.example> |
       | body       | Please file this. |
     When Gmail pushes a watch notification with history id "1042"
     Then an outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/messages/send" matches:
       | method        | POST |
       | body.threadId | t-1  |
     And the sent mail decodes to:
-      | To      | ada@tonotop.com               |
+      | To      | ada@marigold.example               |
       | Subject | Re: Invoice #4821             |
       | text    | #"Got it .* Invoice #4821.*"  |
 
@@ -98,8 +98,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | Invoice #4822    |
       | body    | Another one.     |
     When Gmail pushes a watch notification with history id "1099"
@@ -108,7 +108,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
   Scenario: a task route without the hail module installed logs a warning and marks the message unsent, no exception
     Given config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -116,8 +116,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com   |
-      | to      | yopp@tonotop.com  |
+      | from    | ada@marigold.example   |
+      | to      | isaac@marigold.example  |
       | subject | Invoice #4821     |
       | body    | Please file this. |
     When Gmail pushes a watch notification with history id "1042"
@@ -131,7 +131,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given the hail module is installed
     And config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -140,8 +140,8 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com                                           |
-      | to      | yopp@tonotop.com                                          |
+      | from    | ada@marigold.example                                           |
+      | to      | isaac@marigold.example                                          |
       | subject | Invoice #4821                                             |
       | body    | This message body is much longer than twenty characters. |
     When Gmail pushes a watch notification with history id "1042"
@@ -153,7 +153,7 @@ Feature: Gmail task routes — mail becomes a hail on a band
     Given the hail module is installed
     And config:
       | gmail-routes.invoices.order         | 20              |
-      | gmail-routes.invoices.match.from    | *@tonotop.com   |
+      | gmail-routes.invoices.match.from    | *@marigold.example   |
       | gmail-routes.invoices.match.subject | (?i)\binvoice\b |
       | gmail-routes.invoices.action        | task            |
       | gmail-routes.invoices.band          | ops-inbox       |
@@ -162,17 +162,17 @@ Feature: Gmail task routes — mail becomes a hail on a band
       | m-1 | t-1      |
       | m-2 | t-2      |
     And the Gmail API returns message "m-1":
-      | from         | Ada Lovelace <ada@tonotop.com>                                                                                        |
-      | to           | yopp@tonotop.com                                                                                                      |
+      | from         | Ada Lovelace <ada@marigold.example>                                                                                        |
+      | to           | isaac@marigold.example                                                                                                      |
       | subject      | Invoice #4821                                                                                                         |
       | body         | Please file this.                                                                                                     |
-      | auth-results | mx.google.com; dkim=pass header.d=tonotop.com; spf=pass smtp.mailfrom=tonotop.com; dmarc=pass header.from=tonotop.com |
+      | auth-results | mx.google.com; dkim=pass header.d=marigold.example; spf=pass smtp.mailfrom=marigold.example; dmarc=pass header.from=marigold.example |
     And the Gmail API returns message "m-2":
-      | from         | Ada Lovelace <ada@tonotop.com>                                             |
-      | to           | yopp@tonotop.com                                                           |
+      | from         | Ada Lovelace <ada@marigold.example>                                             |
+      | to           | isaac@marigold.example                                                           |
       | subject      | Invoice #9999 urgent                                                       |
       | body         | Wire the funds now.                                                        |
-      | auth-results | mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=tonotop.com |
+      | auth-results | mx.google.com; dkim=none; spf=softfail; dmarc=fail header.from=marigold.example |
     When Gmail pushes a watch notification with history id "1099"
     Then message "m-1" carries label "isaac/invoices"
     And one hail was sent to band "ops-inbox" with:

@@ -11,12 +11,12 @@ Feature: Gmail pull mode
     Given default Grover setup in "/test/gmail-pull"
     And config:
       | log.output                | memory           |
-      | google.tonotop.project    | marigold         |
-      | comms.gmail.gmail/account | yopp@tonotop.com |
+      | google.marigold.project    | marigold         |
+      | comms.gmail.gmail/account | isaac@marigold.example |
       | comms.gmail.gmail/crew    | main             |
       | sessions.naming-strategy  | sequential       |
       | gmail-routes.team.order      | 90            |
-      | gmail-routes.team.match.from | *@tonotop.com |
+      | gmail-routes.team.match.from | *@marigold.example |
       | gmail-routes.team.action     | converse      |
     And the google auth store has access "at-1" and refresh "rt-1"
 
@@ -39,13 +39,13 @@ Feature: Gmail pull mode
       | m-1 | t-1      |
       | m-2 | t-2      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com     |
-      | to      | yopp@tonotop.com    |
+      | from    | ada@marigold.example     |
+      | to      | isaac@marigold.example    |
       | subject | Deploy window       |
       | body    | Can we ship Friday? |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | Lunch            |
       | body    | Tacos?           |
     And the following model responses are queued:
@@ -56,7 +56,7 @@ Feature: Gmail pull mode
     When the Gmail pull timer ticks
     Then session "gmail-t-1" has transcript matching:
       | type    | message.role | message.content                                    |
-      | message | user         | #".*ada@tonotop.com.*Deploy window.*ship Friday.*" |
+      | message | user         | #".*ada@marigold.example.*Deploy window.*ship Friday.*" |
       | message | assistant    | Friday works.                                      |
     And session "gmail-t-2" has transcript matching:
       | type    | message.role | message.content     |
@@ -79,8 +79,8 @@ Feature: Gmail pull mode
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | Retry works      |
       | body    | Second try       |
     And the following model responses are queued:

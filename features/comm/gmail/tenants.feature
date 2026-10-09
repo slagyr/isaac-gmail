@@ -9,16 +9,16 @@ Feature: Gmail across several Google organizations
     Given default Grover setup in "/test/gmail-tenants"
     And config:
       | log.output                     | memory                          |
-      | google.tonotop.project         | marigold                        |
-      | google.tonotop.topic           | projects/marigold/topics/isaac  |
+      | google.marigold.project         | marigold                        |
+      | google.marigold.topic           | projects/marigold/topics/isaac  |
       | google.acme.project            | acme-prod                       |
       | google.acme.topic              | projects/acme-prod/topics/isaac |
-      | comms.gmail.gmail/google             | tonotop                         |
-      | comms.gmail.gmail/account      | yopp@tonotop.com                |
+      | comms.gmail.gmail/google             | marigold                         |
+      | comms.gmail.gmail/account      | isaac@marigold.example                |
       | comms.gmail-acme.type          | gmail                           |
       | comms.gmail-acme.gmail/google        | acme                            |
       | comms.gmail-acme.gmail/account | isaac@acme.example              |
-    And the google auth store for organization "tonotop" has access "at-tonotop" and refresh "rt-tonotop"
+    And the google auth store for organization "marigold" has access "at-marigold" and refresh "rt-marigold"
     And the google auth store for organization "acme" has access "at-acme" and refresh "rt-acme"
     And the clock is fixed at "2026-09-18T12:00:00Z"
 
@@ -37,15 +37,15 @@ Feature: Gmail across several Google organizations
     Given gmail comm "gmail" is registered
     When gmail comm send! is invoked with:
       | path      | value              |
-      | from      | ada@tonotop.com    |
+      | from      | ada@marigold.example    |
       | subject   | Standup            |
-      | thread-id | t-tonotop-1        |
+      | thread-id | t-marigold-1        |
       | content   | On my way.         |
     Then an outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/messages/send" matches:
       | #index                | 1                 |
       | method                | POST              |
-      | headers.Authorization | Bearer at-tonotop |
-      | body.threadId         | t-tonotop-1       |
+      | headers.Authorization | Bearer at-marigold |
+      | body.threadId         | t-marigold-1       |
 
   Scenario: each mailbox is watched against its own organization's topic
     Given the Gmail API grants a watch with history id "900" expiring at "2026-09-25T12:00:00Z"
@@ -58,9 +58,9 @@ Feature: Gmail across several Google organizations
     And an outbound HTTP request to "https://gmail.googleapis.com/gmail/v1/users/me/watch" matches:
       | #index                | 1                              |
       | method                | POST                           |
-      | headers.Authorization | Bearer at-tonotop              |
+      | headers.Authorization | Bearer at-marigold              |
       | body.topicName        | projects/marigold/topics/isaac |
     And the log has entries matching:
       | level | event              | key                |
       | :info | :google/registered | isaac@acme.example |
-      | :info | :google/registered | yopp@tonotop.com   |
+      | :info | :google/registered | isaac@marigold.example   |

@@ -12,14 +12,14 @@
     (reset! (.-cfg c) slice)
     c))
 
-(def slice {:gmail/account "yopp@tonotop.com"})
+(def slice {:gmail/account "isaac@marigold.example"})
 
 (def a-thread-message
   {:id       "m-1"
    :threadId "t-1"
-   :payload  {:headers [{:name "From" :value "ada@tonotop.com"}
+   :payload  {:headers [{:name "From" :value "ada@marigold.example"}
                         {:name "Subject" :value "Deploy window"}
-                        {:name "Message-ID" :value "<abc@tonotop.com>"}]
+                        {:name "Message-ID" :value "<abc@marigold.example>"}]
               :body    {:data ""}}})
 
 (describe "gmail comm send! (isaac-iwio)"
@@ -36,10 +36,10 @@
                    (comm/send! c {:gmail/thread "t-1" :content "Looking now."}))
           (should= "t-1" (:thread-id @sent))
           (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
-            (should-contain "To: ada@tonotop.com" raw)
+            (should-contain "To: ada@marigold.example" raw)
             (should-contain "Subject: Re: Deploy window" raw)
-            (should-contain "In-Reply-To: <abc@tonotop.com>" raw)
-            (should-contain "References: <abc@tonotop.com>" raw)
+            (should-contain "In-Reply-To: <abc@marigold.example>" raw)
+            (should-contain "References: <abc@marigold.example>" raw)
             (should-contain "Looking now." raw)))))
 
     (it "fails transiently when the thread cannot be found"
@@ -58,11 +58,11 @@
         (with-redefs [gmail-api/access-token   (constantly "at-1")
                       gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-2"})]
           (should= {:ok true}
-                   (comm/send! c {:gmail/to "grace@tonotop.com" :gmail/subject "Deploy window"
+                   (comm/send! c {:gmail/to "grace@marigold.example" :gmail/subject "Deploy window"
                                   :content  "Ada asks: can we ship Friday?"}))
           (should-be-nil (:thread-id @sent))
           (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
-            (should-contain "To: grace@tonotop.com" raw)
+            (should-contain "To: grace@marigold.example" raw)
             (should-contain "Subject: Deploy window" raw)
             (should-contain "Ada asks: can we ship Friday?" raw)))))
 
@@ -71,7 +71,7 @@
             c     (comm-with slice)]
         (with-redefs [gmail-api/access-token   (constantly "at-1")
                       gmail-api/messages-send! (fn [_] (reset! sent? true) {})]
-          (let [result (comm/send! c {:gmail/to "grace@tonotop.com" :content "Hi"})]
+          (let [result (comm/send! c {:gmail/to "grace@marigold.example" :content "Hi"})]
             (should-not (:ok result))
             (should-not (:transient? result))
             (should-not @sent?))))))
@@ -84,11 +84,11 @@
         (with-redefs [gmail-api/access-token   (constantly "at-1")
                       gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-3"})]
           (should= {:ok true}
-                   (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
+                   (comm/send! c {:from "ada@marigold.example" :subject "Standup" :message-id "<m1>"
                                   :thread-id "t-7" :content "On my way."}))
           (should= "t-7" (:thread-id @sent))
           (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
-            (should-contain "To: ada@tonotop.com" raw)
+            (should-contain "To: ada@marigold.example" raw)
             (should-contain "Subject: Re: Standup" raw)))))
 
     (it "does nothing on blank content"
@@ -107,7 +107,7 @@
                       gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-4"})]
           (nexus/-with-nested-nexus {:fs fs*}
             (should= {:ok true}
-                     (comm/send! c {:gmail/to      "grace@tonotop.com"
+                     (comm/send! c {:gmail/to      "grace@marigold.example"
                                     :gmail/subject "Report"
                                     :content       "Attached."
                                     :attachments   ["/cwd/report.pdf"]}))))
@@ -142,7 +142,7 @@
                       gmail-api/messages-send! (fn [args] (reset! sent args) {:id "s-6"})]
           (nexus/-with-nested-nexus {:fs fs*}
             (should= {:ok true}
-                     (comm/send! c {:from "ada@tonotop.com" :subject "Standup" :message-id "<m1>"
+                     (comm/send! c {:from "ada@marigold.example" :subject "Standup" :message-id "<m1>"
                                     :thread-id "t-7" :content "On my way." :attachments ["/cwd/report.pdf"]}))))
         (let [raw (String. (gmail-api/decode-raw (:raw @sent)) "UTF-8")]
           (should-contain "Content-Type: multipart/mixed" raw)
@@ -157,7 +157,7 @@
         (with-redefs [gmail-api/access-token   (constantly "at-1")
                       gmail-api/messages-send! (fn [_] (reset! sent? true) {})]
           (nexus/-with-nested-nexus {:fs fs*}
-            (let [result (comm/send! c {:gmail/to      "grace@tonotop.com"
+            (let [result (comm/send! c {:gmail/to      "grace@marigold.example"
                                         :gmail/subject "Big"
                                         :content       "Here."
                                         :attachments   ["/cwd/big.bin"]})]

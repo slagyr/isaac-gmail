@@ -21,11 +21,11 @@
   (describe "crew-id"
 
     (it "is gmail/triage's own crew when it names one"
-      (should= "triage" (#'sut/crew-id {:gmail/triage {:crew "triage"} :defaults {:frequencies {:crew :yopp}}})))
+      (should= "triage" (#'sut/crew-id {:gmail/triage {:crew "triage"} :defaults {:frequencies {:crew :isaac}}})))
 
     (it "falls back to the operator's default crew, never main (isaac-zule)"
-      (should= "yopp" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew :yopp}}}))
-      (should= "yopp" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew "yopp"}}}))))
+      (should= "isaac" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew :isaac}}}))
+      (should= "isaac" (#'sut/crew-id {:gmail/triage {:model "echo"} :defaults {:frequencies {:crew "isaac"}}}))))
 
   (describe "apply?"
 
@@ -60,7 +60,7 @@
             dispatched (atom nil)
             cfg        {:gmail/triage {:model "echo" :crew "main" :choices ["team" "newsletters" "ignore"]
                                        :default "ignore"}}
-            message    {:id "m-1" :from "pat@example.com" :to "yopp@tonotop.com"
+            message    {:id "m-1" :from "pat@example.com" :to "isaac@marigold.example"
                         :subject "Quick question" :body "Are you free?"}]
         (with-redefs [store/registered-store (fn [] :fake-store)
                       store/delete-session!   (fn [_store name] (reset! deleted name))

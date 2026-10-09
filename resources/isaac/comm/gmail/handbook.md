@@ -32,7 +32,7 @@ starts a turn on when its matched route names none of its own, or when no
 mailbox:
 
 ```
-config set comms.gmail.gmail/account yopp@example.com
+config set comms.gmail.gmail/account isaac@example.com
 config set comms.gmail.gmail/crew cordelia
 ```
 

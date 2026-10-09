@@ -13,8 +13,8 @@ Feature: Gmail routes and verdict labels
     Given default Grover setup in "/test/gmail-routes"
     And config:
       | log.output                | memory           |
-      | google.tonotop.project    | marigold         |
-      | comms.gmail.gmail/account | yopp@tonotop.com |
+      | google.marigold.project    | marigold         |
+      | comms.gmail.gmail/account | isaac@marigold.example |
       | comms.gmail.gmail/crew    | main             |
       | sessions.naming-strategy  | sequential       |
     And the google auth store has access "at-1" and refresh "rt-1"
@@ -23,8 +23,8 @@ Feature: Gmail routes and verdict labels
   Scenario: a route matching the delivery address starts a turn on that route's crew
     Given config:
       | gmail-routes.ops.order      | 10            |
-      | gmail-routes.ops.match.to   | yopp+ops@*    |
-      | gmail-routes.ops.match.from | *@tonotop.com |
+      | gmail-routes.ops.match.to   | isaac+ops@*    |
+      | gmail-routes.ops.match.from | *@marigold.example |
       | gmail-routes.ops.action     | converse      |
       | gmail-routes.ops.crew       | ops           |
       | crew.ops.model              | grover        |
@@ -33,8 +33,8 @@ Feature: Gmail routes and verdict labels
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | Prod incident        |
       | body    | Deploy is down       |
     And the following model responses are queued:
@@ -50,20 +50,20 @@ Feature: Gmail routes and verdict labels
   Scenario: the first matching route wins over a later, broader route
     Given config:
       | gmail-routes.ops.order       | 10            |
-      | gmail-routes.ops.match.to    | yopp+ops@*    |
-      | gmail-routes.ops.match.from  | *@tonotop.com |
+      | gmail-routes.ops.match.to    | isaac+ops@*    |
+      | gmail-routes.ops.match.from  | *@marigold.example |
       | gmail-routes.ops.action      | converse      |
       | gmail-routes.ops.crew        | ops           |
       | gmail-routes.team.order      | 90            |
-      | gmail-routes.team.match.from | *@tonotop.com |
+      | gmail-routes.team.match.from | *@marigold.example |
       | gmail-routes.team.action     | converse      |
       | gmail-routes.team.crew       | main          |
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | Prod incident        |
       | body    | Deploy is down       |
     And the following model responses are queued:
@@ -84,7 +84,7 @@ Feature: Gmail routes and verdict labels
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | digest@substack.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | This week's reads   |
       | body    | Top 5 links         |
     When Gmail pushes a watch notification with history id "1042"
@@ -100,7 +100,7 @@ Feature: Gmail routes and verdict labels
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
       | from    | digest@substack.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | Next week's reads   |
       | body    | Top 5 links again   |
     When Gmail pushes a watch notification with history id "1099"
@@ -112,8 +112,8 @@ Feature: Gmail routes and verdict labels
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com    |
-      | to      | yopp@tonotop.com   |
+      | from    | ada@marigold.example    |
+      | to      | isaac@marigold.example   |
       | subject | Random thought     |
       | body    | Did you see this?  |
     When Gmail pushes a watch notification with history id "1042"
@@ -121,20 +121,20 @@ Feature: Gmail routes and verdict labels
     And the session count is 0
     And the log has entries matching:
       | level | event           | from            | subject        |
-      | :info | :gmail/unrouted | ada@tonotop.com | Random thought |
+      | :info | :gmail/unrouted | ada@marigold.example | Random thought |
 
   Scenario: bulk precedence overrides a matching converse route
     Given config:
       | gmail-routes.team.order      | 90            |
-      | gmail-routes.team.match.from | *@tonotop.com |
+      | gmail-routes.team.match.from | *@marigold.example |
       | gmail-routes.team.action     | converse      |
       | gmail-routes.team.crew       | main          |
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from       | ada@tonotop.com  |
-      | to         | yopp@tonotop.com |
+      | from       | ada@marigold.example  |
+      | to         | isaac@marigold.example |
       | subject    | Weekly digest    |
       | body       | Team update      |
       | precedence | bulk             |
@@ -145,7 +145,7 @@ Feature: Gmail routes and verdict labels
   Scenario: a message already labelled by an earlier pass is skipped
     Given config:
       | gmail-routes.team.order      | 90            |
-      | gmail-routes.team.match.from | *@tonotop.com |
+      | gmail-routes.team.match.from | *@marigold.example |
       | gmail-routes.team.action     | converse      |
       | gmail-routes.team.crew       | main          |
     And message "m-1" already carries label "isaac/team"
@@ -153,8 +153,8 @@ Feature: Gmail routes and verdict labels
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com  |
-      | to      | yopp@tonotop.com |
+      | from    | ada@marigold.example  |
+      | to      | isaac@marigold.example |
       | subject | Standup          |
       | body    | On my way        |
     When Gmail pushes a watch notification with history id "1042"
@@ -166,8 +166,8 @@ Feature: Gmail routes and verdict labels
   Scenario: a missing label is created once and reused for the next message
     Given config:
       | gmail-routes.ops.order      | 10            |
-      | gmail-routes.ops.match.to   | yopp+ops@*    |
-      | gmail-routes.ops.match.from | *@tonotop.com |
+      | gmail-routes.ops.match.to   | isaac+ops@*    |
+      | gmail-routes.ops.match.from | *@marigold.example |
       | gmail-routes.ops.action     | converse      |
       | gmail-routes.ops.crew       | ops           |
     And the Gmail API history since "1000" adds messages:
@@ -175,13 +175,13 @@ Feature: Gmail routes and verdict labels
       | m-1 | t-1      |
       | m-2 | t-2      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | First incident       |
       | body    | Ship it              |
     And the Gmail API returns message "m-2":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | Second incident      |
       | body    | Ship it again        |
     And the following model responses are queued:
@@ -195,14 +195,14 @@ Feature: Gmail routes and verdict labels
   Scenario: a route may live in its own config file
     Given config file "gmail-routes/ops.edn" containing:
       """
-      {:order 10 :match {:to "yopp+ops@*" :from "*@tonotop.com"} :action :converse :crew "ops"}
+      {:order 10 :match {:to "isaac+ops@*" :from "*@marigold.example"} :action :converse :crew "ops"}
       """
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | Prod incident        |
       | body    | Deploy is down       |
     When Gmail pushes a watch notification with history id "1042"
@@ -211,18 +211,18 @@ Feature: Gmail routes and verdict labels
   Scenario: two route files order by :order, not filename
     Given config file "gmail-routes/aaa-catchall.edn" containing:
       """
-      {:order 90 :match {:from "*@tonotop.com"} :action :converse :crew "main"}
+      {:order 90 :match {:from "*@marigold.example"} :action :converse :crew "main"}
       """
     And config file "gmail-routes/zzz-ops.edn" containing:
       """
-      {:order 10 :match {:to "yopp+ops@*" :from "*@tonotop.com"} :action :converse :crew "ops"}
+      {:order 10 :match {:to "isaac+ops@*" :from "*@marigold.example"} :action :converse :crew "ops"}
       """
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
-      | from    | ada@tonotop.com      |
-      | to      | yopp+ops@tonotop.com |
+      | from    | ada@marigold.example      |
+      | to      | isaac+ops@marigold.example |
       | subject | Prod incident        |
       | body    | Deploy is down       |
     When Gmail pushes a watch notification with history id "1042"
@@ -232,14 +232,14 @@ Feature: Gmail routes and verdict labels
   Scenario: adding a route file while running is picked up on the next message, no restart
     Given config file "gmail-routes/team.edn" containing:
       """
-      {:order 90 :match {:from "*@tonotop.com"} :action :converse :crew "main"}
+      {:order 90 :match {:from "*@marigold.example"} :action :converse :crew "main"}
       """
     And the Gmail API history since "1000" adds messages:
       | id  | threadId |
       | m-1 | t-1      |
     And the Gmail API returns message "m-1":
       | from    | digest@substack.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | This week's reads   |
       | body    | Top 5 links         |
     When Gmail pushes a watch notification with history id "1042"
@@ -256,7 +256,7 @@ Feature: Gmail routes and verdict labels
       | m-2 | t-2      |
     And the Gmail API returns message "m-2":
       | from    | digest@substack.com |
-      | to      | yopp@tonotop.com    |
+      | to      | isaac@marigold.example    |
       | subject | Next week's reads   |
       | body    | Top 5 links again   |
     When Gmail pushes a watch notification with history id "1099"
@@ -266,6 +266,6 @@ Feature: Gmail routes and verdict labels
   Scenario: an unknown route action is reported by config validation, naming the route
     Given config file "gmail-routes/broken.edn" containing:
       """
-      {:order 10 :match {:from "*@tonotop.com"} :action :archive}
+      {:order 10 :match {:from "*@marigold.example"} :action :archive}
       """
     Then isaac config validate reports an unknown action for route "broken"
