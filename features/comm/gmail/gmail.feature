@@ -52,6 +52,32 @@ Feature: Gmail comm
       | message | assistant    | Yes.                |
     And the gmail history cursor is "1042"
 
+  @wip
+  Scenario: the turn records the sender as an email handle (isaac-m8vk)
+    A handle is how one comm names the party on the other end. Gmail names
+    a sender by the address in the From header. Anyone can write a From
+    header, so the handle is not authenticated; contacts still match it by
+    email.
+    Given the Gmail API history since "1000" adds messages:
+      | id  | threadId |
+      | m-1 | t-1      |
+    And the Gmail API returns message "m-1":
+      | from    | ada@marigold.example   |
+      | to      | isaac@marigold.example |
+      | subject | Deploy window          |
+      | body    | Can we ship Friday?    |
+    And the following model responses are queued:
+      | model | type | content       |
+      | echo  | text | Friday works. |
+    When Gmail pushes a watch notification with history id "1042"
+    Then the latest turn on session "gmail-t-1" matches:
+      | key                | value                |
+      | from.kind          | handle               |
+      | from.comm          | gmail                |
+      | from.id            | ada@marigold.example |
+      | from.email         | ada@marigold.example |
+      | from.authenticated | false                |
+
   Scenario: a reply goes out on the originating thread with the headers clients need
     Given the Gmail API history since "1000" adds messages:
       | id  | threadId |
