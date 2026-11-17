@@ -106,6 +106,12 @@
                                   :origin  (origin msg)}))
     key))
 
+(defn- sender-handle [from]
+  (let [email (gate/address from)
+        name  (some-> (re-find #"^\s*(.*?)\s*<[^>]+>" (or from "")) second str/trim)]
+    (cond-> {:kind :handle :comm :gmail :id email :email email :authenticated false}
+      (seq name) (assoc :name (str/replace name #"^\"|\"$" "")))))
+
 (defn- start-turn! [msg cfg crew-id]
   (let [key    (ensure-session! msg crew-id)
         cwd    (:cwd (api/get-session key))
@@ -115,6 +121,7 @@
         ch     (live-comm cfg)]
     (gmail/remember-origin! key origin)
     (api/dispatch! (cond-> {:session-key key
+                            :from        (sender-handle (:from msg))
                             :input       input
                             :origin      origin
                             :crew        crew-id

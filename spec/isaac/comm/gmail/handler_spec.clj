@@ -47,3 +47,26 @@
         (#'sut/start-turn! {:id "m-1" :threadId "t-1" :from "ada@marigold.example" :subject "Hi" :body "Yo"} {} "main")
         (should= "gmail-t-1" (:session-key @dispatched))
         (should= guidance/TEXT (:guidance @dispatched))))))
+
+(describe "gmail handler - sender handle (isaac-m8vk)"
+  (it "sends the bare lower-case sender address as an unauthenticated handle"
+    (let [dispatched (atom nil)]
+      (with-redefs [api/get-session     (fn [_] nil)
+                    api/create-session! (fn [id _] {:name id})
+                    api/dispatch!       (fn [req] (reset! dispatched req))
+                    sut/live-comm       (fn [_] nil)]
+        (#'sut/start-turn! {:id "m-1" :threadId "t-1" :from "ADA@Marigold.Example"} {} "main")
+        (should= {:kind :handle :comm :gmail :id "ada@marigold.example"
+                  :email "ada@marigold.example" :authenticated false}
+                 (:from @dispatched)))))
+
+  (it "also sends the display name when the From header has one"
+    (let [dispatched (atom nil)]
+      (with-redefs [api/get-session     (fn [_] nil)
+                    api/create-session! (fn [id _] {:name id})
+                    api/dispatch!       (fn [req] (reset! dispatched req))
+                    sut/live-comm       (fn [_] nil)]
+        (#'sut/start-turn! {:id "m-2" :threadId "t-2" :from "Grace Hopper <GRACE@Marigold.Example>"} {} "main")
+        (should= {:kind :handle :comm :gmail :id "grace@marigold.example"
+                  :email "grace@marigold.example" :name "Grace Hopper" :authenticated false}
+                 (:from @dispatched))))))

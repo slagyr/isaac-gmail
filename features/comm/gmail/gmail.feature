@@ -52,7 +52,6 @@ Feature: Gmail comm
       | message | assistant    | Yes.                |
     And the gmail history cursor is "1042"
 
-  @wip
   Scenario: the turn records the sender as an email handle (isaac-m8vk)
     A handle is how one comm names the party on the other end. Gmail names
     a sender by the address in the From header. Anyone can write a From

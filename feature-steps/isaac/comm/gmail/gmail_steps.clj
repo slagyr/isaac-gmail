@@ -32,6 +32,7 @@
     [isaac.foundation.nexus :as nexus]
     [isaac.foundation.scheduler.runtime :as scheduler]
     [isaac.agent.session.session-steps :as session-steps]
+    [isaac.agent.turn.queue :as turn-queue]
     [isaac.agent.session.store.memory :as memory-store]
     [isaac.agent.session.store.spi :as session-store]
     [isaac.foundation.step-tables :as match]))
@@ -731,6 +732,19 @@
           "attachments" (g/should (cell-matches? v (decoded-attachment-filenames-csv decoded)))
           (g/should (cell-matches? v (header-from-decoded decoded key))))))
     (g/should (seq decoded))))
+
+(defn latest-turn-on-session-matches [session table]
+  (let [record (->> (with-feature-fs #(binding [turn-queue/*root* (root-dir)] (turn-queue/all-turns)))
+                    (filter #(= session (:session %)))
+                    (sort-by :created-at)
+                    last)]
+    (g/should-not-be-nil record)
+    (doseq [[path expected] (:rows table)]
+      (let [actual (get-in record (mapv keyword (str/split path #"\.")))]
+        (g/should= expected (if (keyword? actual) (name actual) (str actual)))))))
+
+(defthen "the latest turn on session \"{key:string}\" matches:"
+  isaac.comm.gmail.gmail-steps/latest-turn-on-session-matches)
 
 (defgiven "the gmail history cursor is {id:string}"
   isaac.comm.gmail.gmail-steps/cursor-is)
